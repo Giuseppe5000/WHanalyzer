@@ -5,7 +5,6 @@
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
-#include <stdbool.h>
 
 struct Lexer {
     const char *src;
