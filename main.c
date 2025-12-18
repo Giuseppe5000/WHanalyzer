@@ -21,21 +21,23 @@ int main(void) {
     /* Copy the text in a buffer */
     char *src = malloc(file_size*sizeof(char));
     if (src == NULL) {
-        fprintf(stderr, "[ERROR]: OOM when allocating %zu bytes.\n", file_size*sizeof(char));
+        fprintf(stderr, "[ERROR]: OOM when allocating %zu bytes.\n", (file_size + 1)*sizeof(char));
         exit(1);
 
     }
     fread(src, file_size, 1, fp);
+    src[file_size] = '\0';
     fclose(fp);
 
     Lexer *lex = lex_init(src);
 
     Token t = lex_next(lex);
 
-    for (size_t i = 0; i < 20; ++i) {
-
-        if (t.type == TOKEN_VAR) {
-            printf("VAR %.*s\n", (int)t.as.str.len, t.as.str.data);
+    while (t.type != TOKEN_EOF) {
+        if (t.type != TOKEN_NUM) {
+            printf("TOKEN(%d): %.*s\n", t.type, (int)t.as.str.len, t.as.str.data);
+        } else {
+            printf("TOKEN(%d): %d\n", t.type, t.as.num);
         }
 
         t = lex_next(lex);

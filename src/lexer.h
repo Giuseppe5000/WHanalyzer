@@ -69,7 +69,10 @@ typedef struct {
 
 typedef struct Lexer Lexer;
 
-/* Construct a new lexer */
+/*
+Construct a new lexer.
+'src' must be a string buffer and must be null terminated.
+*/
 Lexer *lex_init(const char *src);
 
 /* Get next token */
