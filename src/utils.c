@@ -5,7 +5,7 @@
 void *xmalloc(size_t size) {
     void *ptr = malloc(size);
     if (ptr == NULL) {
-        fprintf(stderr, "[ERROR]: OOM when allocating %zu bytes.", size);
+        fprintf(stderr, "[ERROR]: OOM when allocating %zu bytes.\n", size);
         exit(1);
     }
     return ptr;

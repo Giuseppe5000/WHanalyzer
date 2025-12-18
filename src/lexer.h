@@ -8,7 +8,7 @@
 Syntactic Categories for While language.
 
 numerals:
-    n ∈ Num
+    n ∈ Num (integers)
 
 variables:
     x ∈ Var
@@ -60,11 +60,11 @@ typedef struct {
     enum Token_Type type;
     union {
         struct {
-            const char *str;
+            const char *data;
             size_t len;
-        };
+        } str;
         int32_t num;
-    };
+    } as;
 } Token;
 
 typedef struct Lexer Lexer;
@@ -73,7 +73,7 @@ typedef struct Lexer Lexer;
 Lexer *lex_init(const char *src);
 
 /* Get next token */
-Token lex_next(void);
+Token lex_next(Lexer *lex);
 
 /* Free the lexer */
 void lex_free(Lexer *lex);
