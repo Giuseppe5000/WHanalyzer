@@ -2,40 +2,41 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-CFG *cfg_init(AST_Node *root) {
-
-    AST_Node *node = root;
-
+static size_t cfg_print_points_impl(AST_Node *node, size_t counter) {
     switch (node->type) {
     case NODE_ASSIGN:
-        printf("(l) %.*s := X (l)\n", (int)node->as.child.left->as.var.len, node->as.child.left->as.var.str);
-        break;
     case NODE_SKIP:
-        printf("(l) skip (l)\n");
+        printf("(P%zu)\n", counter++);
+        parser_print_ast(node);
         break;
     case NODE_SEQ:
-        printf("(l)\n");
-        parser_print_ast(node->as.child.left);
-        printf("(l)\n");
-        parser_print_ast(node->as.child.right);
-        printf("(l)\n");
+        counter = cfg_print_points_impl(node->as.child.left, counter);
+        counter = cfg_print_points_impl(node->as.child.right, counter);
         break;
     case NODE_IF:
-        printf("(l) if b then (l)\n");
-        parser_print_ast(node->as.child.left);
-        printf("(l) else (l)\n");
-        parser_print_ast(node->as.child.right);
-        printf("(l) fi (l)\n");
+        printf("if (P%zu) b then\n", counter++);
+        counter = cfg_print_points_impl(node->as.child.left, counter);
+        printf("(P%zu) else\n", counter++);
+        counter = cfg_print_points_impl(node->as.child.right, counter);
+        printf("fi\n");
         break;
     case NODE_WHILE:
-        printf("(l) while (l) b do\n");
-        printf("(l)\n");
-        parser_print_ast(node->as.child.left);
-        printf("(l) done (l)\n");
+        printf("while (P%zu) b do\n", counter++);
+        counter = cfg_print_points_impl(node->as.child.left, counter);
+        printf("(P%zu) done\n", counter++);
         break;
     default:
         break;
     }
+    return counter;
+}
 
+static void cfg_print_points(AST_Node *node) {
+    size_t count = cfg_print_points_impl(node, 1);
+    printf("(P%zu)\n", count);
+}
+
+CFG *cfg_init(AST_Node *root) {
+    cfg_print_points(root);
     return NULL;
 }

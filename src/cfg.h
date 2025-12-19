@@ -27,7 +27,12 @@ struct CFG_Edge {
 
 struct CFG_Node{
     size_t id;
-    CFG_Edge *edges;   /* Array of edges that *starts* from this point */
+
+    /*
+    Array of edges that *starts* from this point.
+    The size is fixed because one node can have at maximum 2 edges in output (if case).
+    */
+    CFG_Edge edges[2];
     size_t edge_count;
 };
 

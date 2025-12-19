@@ -1,4 +1,5 @@
 #include "src/lang/parser.h"
+#include "src/cfg.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +34,9 @@ int main(void) {
 
     AST_Node *root = parser_parse(parser);
 
-    parser_print_ast(root);
+    // parser_print_ast(root);
+
+    cfg_init(root);
 
     parser_free(parser);
     free(src);
