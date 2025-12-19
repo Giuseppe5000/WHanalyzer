@@ -62,6 +62,15 @@ static Token check_keyword(Lexer *lex, Keyword_Token kt) {
     Token t = {0};
 
     if (strncmp(lex->cursor, kt.keyword, strlen(kt.keyword)) == 0) {
+
+        /*
+        A variable like 'whileCounter' will be tokenize as 'while' and 'Counter'.
+        Here I should check that after the keyword there is no alphanumeric char.
+        */
+        if (isalnum(kt.keyword[0]) && isalnum(lex->cursor[strlen(kt.keyword)])) {
+            return t;
+        }
+
         t.type = kt.type;
         t.as.str.data = lex->cursor;
         t.as.str.len = strlen(kt.keyword);
@@ -98,10 +107,10 @@ Token lex_next(Lexer *lex) {
 
     /* Keywords */
     for (size_t i = 0; i < keywords_len; ++i) {
-        Token t_keyword = check_keyword(lex, keywords[i]);
+        t = check_keyword(lex, keywords[i]);
 
-        if (t_keyword.type != TOKEN_EOF) {
-            return t_keyword;
+        if (t.type != TOKEN_EOF) {
+            return t;
         }
     }
 
@@ -119,6 +128,7 @@ Token lex_next(Lexer *lex) {
         return t;
     }
 
+    /*TODO: Better to signal a syntax error */
     assert(0 && "UNREACHABLE");
 }
 
