@@ -25,7 +25,7 @@ boolean expressions:
 
 statements:
     S ∈ Stm
-    S ::= x := a | skip | S1;S2 | if b then S1 else S2 | while b do S
+    S ::= x := a | skip | S1;S2 | if b then S1 else S2 fi | while b do S done
 */
 
 enum Node_Type {
@@ -86,6 +86,8 @@ Parse the program according to the grammar.
 Returns the root node of the AST.
 */
 AST_Node *parser_parse(Parser *parser);
+
+void parser_print_ast(AST_Node *node);
 
 /* Free the Parser and the AST */
 void parser_free(Parser *parser);
