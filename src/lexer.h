@@ -30,8 +30,10 @@ enum Token_Type {
     TOKEN_IF,
     TOKEN_THEN,
     TOKEN_ELSE,
+    TOKEN_FI,
     TOKEN_WHILE,
     TOKEN_DO,
+    TOKEN_DONE,
 };
 
 typedef struct {

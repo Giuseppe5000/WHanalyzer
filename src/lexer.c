@@ -34,8 +34,10 @@ const Keyword_Token keywords[] = {
     { .keyword = "if"    , .type = TOKEN_IF      },
     { .keyword = "then"  , .type = TOKEN_THEN    },
     { .keyword = "else"  , .type = TOKEN_ELSE    },
+    { .keyword = "fi"    , .type = TOKEN_FI      },
     { .keyword = "while" , .type = TOKEN_WHILE   },
     { .keyword = "do"    , .type = TOKEN_DO      },
+    { .keyword = "done"  , .type = TOKEN_DONE    },
 };
 
 const size_t keywords_len = sizeof(keywords) / sizeof(keywords[0]);
