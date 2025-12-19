@@ -30,6 +30,11 @@ int main(void) {
     fclose(fp);
 
     Parser *parser = parser_init(src);
+
+    AST_Node *root = parser_parse(parser);
+
+    parser_print_ast(root);
+
     parser_free(parser);
     free(src);
     return 0;
