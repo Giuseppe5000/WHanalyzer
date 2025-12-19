@@ -28,7 +28,7 @@ statements:
     S ::= x := a | skip | S1;S2 | if b then S1 else S2 | while b do S
 */
 
-enum Node_type {
+enum Node_Type {
     /* Leaf nodes */
     NODE_NUM,
     NODE_VAR,
@@ -57,14 +57,14 @@ enum Node_type {
 typedef struct AST_Node AST_Node;
 
 struct AST_Node {
-    enum Node_type type;
+    enum Node_Type type;
     union {
         /* Inner node attributes */
         struct {
             AST_Node *left;
             AST_Node *right;
             AST_Node *condition; /* Used for while and if condition */
-        } children;
+        } child;
 
         /* Leaf node attributes */
         struct {
@@ -76,13 +76,18 @@ struct AST_Node {
     } as;
 };
 
+typedef struct Parser Parser;
+
+/* Parser init */
+Parser *parser_init(const char *src);
+
 /*
 Parse the program according to the grammar.
 Returns the root node of the AST.
 */
-AST_Node *parser_init(Lexer *lex);
+AST_Node *parser_parse(Parser *parser);
 
-/* Free the AST */
-void parser_free(AST_Node *root);
+/* Free the Parser and the AST */
+void parser_free(Parser *parser);
 
 #endif /* WHILE_AI_PARSER_ */

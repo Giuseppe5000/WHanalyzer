@@ -1,4 +1,4 @@
-#include "src/lexer.h"
+#include "src/parser.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,21 +29,8 @@ int main(void) {
     src[file_size] = '\0';
     fclose(fp);
 
-    Lexer *lex = lex_init(src);
-
-    Token t = lex_next(lex);
-
-    while (t.type != TOKEN_EOF) {
-        if (t.type != TOKEN_NUM) {
-            printf("TOKEN(%d): %.*s\n", t.type, (int)t.as.str.len, t.as.str.data);
-        } else {
-            printf("TOKEN(%d): %d\n", t.type, t.as.num);
-        }
-
-        t = lex_next(lex);
-    }
-
-    lex_free(lex);
+    Parser *parser = parser_init(src);
+    parser_free(parser);
     free(src);
     return 0;
 }
