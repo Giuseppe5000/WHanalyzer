@@ -4,7 +4,7 @@ z := x / y + y;
 whileCounter11 := 10;
 
 if z <= 0 then
-  z := y
+  z := y; y := 2
 else
   z := x + z
 fi;
