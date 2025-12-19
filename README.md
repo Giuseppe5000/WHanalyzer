@@ -26,3 +26,10 @@ statements:
     S ::= x := a | skip | S1;S2 | if b then S1 else S2 fi | while b do S done
 
 ```
+
+## TODO
+- [ ] Lexing doesn't tokenize negative numbers (-x).
+- [ ] Check if the CFG struct is good for the fixpoint computation.
+- [ ] Implement `cfg_init` for getting the CFG from the AST.
+- [ ] Implement the abstract domain and all the operations in a standalone module.
+- [ ] Wire the CFG with an abstract state and do the fixpoint computation.
