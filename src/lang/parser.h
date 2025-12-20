@@ -84,6 +84,7 @@ Parser *parser_init(const char *src);
 /*
 Parse the program according to the grammar.
 Returns the root node of the AST.
+It can be called multiple times, giving the same result.
 */
 AST_Node *parser_parse(Parser *parser);
 

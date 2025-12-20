@@ -373,7 +373,9 @@ static AST_Node *parse_stmt(Parser *parser) {
 }
 
 AST_Node *parser_parse(Parser *parser) {
-    parser->root = parse_stmt(parser);
+    if (parser->root == NULL) {
+        parser->root = parse_stmt(parser);
+    }
     return parser->root;
 }
 
