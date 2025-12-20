@@ -52,15 +52,13 @@ in the language a node can have an arbitrary number of predecessors. */
 static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, int *pred) {
     switch (node->type) {
     case NODE_SKIP:
-        /* TODO: like the assign */
-        break;
     case NODE_ASSIGN:
-
         /* Create the assign node */
         cfg->nodes[*counter] = build_node(*counter);
         cfg->nodes[*counter].edges[0].src = *counter;
         cfg->nodes[*counter].edges[0].dst = -1;
-        cfg->nodes[*counter].edges[0].type = EDGE_ASSIGN;
+        enum Edge_Type type = node->type == NODE_ASSIGN ? EDGE_ASSIGN : EDGE_SKIP;
+        cfg->nodes[*counter].edges[0].type = type;
         cfg->nodes[*counter].edges[0].as.assign = node;
 
         /* If there is a predecessor node we need to wire an edge to this new node */
@@ -239,8 +237,8 @@ void cfg_print_graphviz(CFG *cfg) {
             case EDGE_GUARD:
                 printf(" [label=\"%s\"]\n", node.edges[j].as.guard.val ? "T" : "F");
                 break;
-            default:
-                printf("\n");
+            case EDGE_SKIP:
+                printf(" [label=\"skip\"]\n");
                 break;
             }
         }
