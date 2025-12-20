@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 struct CFG_Ctx {
     CFG *cfg;
@@ -212,14 +213,31 @@ void cfg_print_graphviz(CFG *cfg) {
             printf("\tP%zu -> P%zu", node.edges[j].src, node.edges[j].dst);
             switch (node.edges[j].type) {
             case EDGE_ASSIGN:
-                {
-                    const char *var = node.edges[j].as.assign->as.child.left->as.var.str;
-                    size_t var_len = node.edges[j].as.assign->as.child.left->as.var.len;
-                    printf(" [label=\"ASSIGN %.*s\"]\n", (int)var_len, var);
-                    break;
+                printf(" [label=\"");
+
+                /*
+                Simply get the pointer to the var name
+                and continue printing until the end cond.
+                This mehod uses the assumption that the vars are pointing
+                to the original source file and that the source is zero ended.
+                */
+                const char *var = node.edges[j].as.assign->as.child.left->as.var.str;
+                while (
+                *var != ';' && *var != '\0' &&
+                strncmp(var, "else", 4) != 0 &&
+                strncmp(var, "fi", 2) != 0 &&
+                strncmp(var, "done", 4) != 0
+                ) {
+                    if (*var != '\n') {
+                        printf("%c", *var);
+                    }
+                    var++;
                 }
+
+                printf("\"]\n");
+                break;
             case EDGE_GUARD:
-                printf(" [label=\"%s\"]\n", node.edges[j].as.guard.val ? "true" : "false");
+                printf(" [label=\"%s\"]\n", node.edges[j].as.guard.val ? "T" : "F");
                 break;
             default:
                 printf("\n");
