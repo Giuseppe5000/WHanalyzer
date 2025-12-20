@@ -37,13 +37,22 @@ struct CFG_Node{
 };
 
 typedef struct {
-    size_t points_count;
-    CFG_Node *points;
+    size_t count;
+    CFG_Node *nodes;
 } CFG;
 
-/* Construct the Control Flow Graph using the AST */
-CFG *cfg_init(AST_Node *root);
+typedef struct CFG_Ctx CFG_Ctx;
 
-void cfg_free(CFG *cfg);
+/* Init the CFG context using the src */
+CFG_Ctx *cfg_init(const char *src);
+
+/* Construct and returns the CFG */
+CFG *cfg_get(CFG_Ctx *ctx);
+
+/*
+Free the CFG context.
+The CFG returned by 'cfg_get' is also freed.
+*/
+void cfg_free(CFG_Ctx *ctx);
 
 #endif /* WHILE_AI_CFG_ */

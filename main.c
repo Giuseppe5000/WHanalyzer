@@ -1,4 +1,3 @@
-#include "src/lang/parser.h"
 #include "src/cfg.h"
 
 #include <stdio.h>
@@ -30,15 +29,10 @@ int main(void) {
     src[file_size] = '\0';
     fclose(fp);
 
-    Parser *parser = parser_init(src);
+    CFG_Ctx *cfg_ctx = cfg_init(src);
+    CFG *cfg = cfg_get(cfg_ctx);
 
-    AST_Node *root = parser_parse(parser);
-
-    // parser_print_ast(root);
-
-    cfg_init(root);
-
-    parser_free(parser);
+    cfg_free(cfg_ctx);
     free(src);
     return 0;
 }
