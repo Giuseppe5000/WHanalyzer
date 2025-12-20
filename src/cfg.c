@@ -76,8 +76,32 @@ size_t pred_stack_pop(Pred_Stack *s) {
 /* ==================================================================================== */
 
 /*
-TODO: The predecessor MUST be a stack (i can use a dynamic arrat), because
-in the language a node can have an arbitrary number of predecessors. */
+Links all the elements in the stack of the predecessors to the current node.
+*/
+static void wire_predecessors(CFG *cfg, size_t cur_node, Pred_Stack *preds) {
+    while (preds->count != 0) {
+        size_t pred = pred_stack_pop(preds);
+        size_t prev_node_edge_count = cfg->nodes[pred].edge_count;
+        if (prev_node_edge_count == 2) {
+            assert(0 && "UNREACHABLE");
+        }
+
+        cfg->nodes[pred].edges[prev_node_edge_count].dst = cur_node;
+        cfg->nodes[pred].edge_count++;
+    }
+}
+
+/*
+Build the CFG using the AST node.
+
+The contruction follows the struct of the AST, exploring recusively the tree.
+
+For each stmt node it saves the information of the current node (src, type and structures)
+into the edge that will point to the next node (even if we don't know the next, in fact 'dst' will be -1).
+
+Then when we are on the successor node we can link to the predecessor using the 'wire_predecessors' utility.
+For tracing all the predecessors (that can be arbitrary) we use the 'preds' stack.
+*/
 static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack *preds) {
     switch (node->type) {
     case NODE_SKIP:
@@ -90,17 +114,7 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         cfg->nodes[*counter].edges[0].type = type;
         cfg->nodes[*counter].edges[0].as.assign = node;
 
-        /* If there is a predecessor node we need to wire an edge to this new node */
-        while (preds->count != 0) {
-            size_t pred = pred_stack_pop(preds);
-            size_t prev_node_edge_count = cfg->nodes[pred].edge_count;
-            if (prev_node_edge_count == 2) {
-                assert(0 && "UNREACHABLE");
-            }
-
-            cfg->nodes[pred].edges[prev_node_edge_count].dst = *counter;
-            cfg->nodes[pred].edge_count++;
-        }
+        wire_predecessors(cfg, *counter, preds);
 
         pred_stack_push(preds, *counter);
         *counter += 1;
@@ -125,17 +139,7 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         cfg->nodes[*counter].edges[1].as.guard.condition = node->as.child.condition;
         cfg->nodes[*counter].edges[1].as.guard.val = false;
 
-        /* If there is a predecessor node we need to wire an edge to this new node */
-        while (preds->count != 0) {
-            size_t pred = pred_stack_pop(preds);
-            size_t prev_node_edge_count = cfg->nodes[pred].edge_count;
-            if (prev_node_edge_count == 2) {
-                assert(0 && "UNREACHABLE");
-            }
-
-            cfg->nodes[pred].edges[prev_node_edge_count].dst = *counter;
-            cfg->nodes[pred].edge_count++;
-        }
+        wire_predecessors(cfg, *counter, preds);
 
         const size_t if_cond = *counter;
         pred_stack_push(preds, *counter);
@@ -183,17 +187,7 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         cfg->nodes[*counter].edges[1].as.guard.condition = node->as.child.condition;
         cfg->nodes[*counter].edges[1].as.guard.val = false;
 
-        /* If there is a predecessor node we need to wire an edge to this new node */
-        while (preds->count != 0) {
-            size_t pred = pred_stack_pop(preds);
-            size_t prev_node_edge_count = cfg->nodes[pred].edge_count;
-            if (prev_node_edge_count == 2) {
-                assert(0 && "UNREACHABLE");
-            }
-
-            cfg->nodes[pred].edges[prev_node_edge_count].dst = *counter;
-            cfg->nodes[pred].edge_count++;
-        }
+        wire_predecessors(cfg, *counter, preds);
 
         const size_t loop_inv = *counter;
         pred_stack_push(preds, *counter);
@@ -201,17 +195,7 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
 
         build_cfg_impl(cfg, node->as.child.left, counter, preds);
 
-        /* Wire the last added node (the predecessor) to the loop invariant node */
-        while (preds->count != 0) {
-            size_t pred = pred_stack_pop(preds);
-            size_t prev_node_edge_count = cfg->nodes[pred].edge_count;
-            if (prev_node_edge_count == 2) {
-                assert(0 && "UNREACHABLE");
-            }
-
-            cfg->nodes[pred].edges[prev_node_edge_count].dst = loop_inv;
-            cfg->nodes[pred].edge_count++;
-        }
+        wire_predecessors(cfg, loop_inv, preds);
 
         /* The predecessor of a statement after the while is the loop invariant */
         pred_stack_push(preds, loop_inv);
@@ -226,17 +210,7 @@ static void build_cfg(CFG *cfg, AST_Node *root) {
     Pred_Stack preds = {0};
     build_cfg_impl(cfg, root, &counter, &preds);
 
-    /* Wire to the last node */
-    while (preds.count != 0) {
-        size_t pred = pred_stack_pop(&preds);
-        size_t prev_node_edge_count = cfg->nodes[pred].edge_count;
-        if (prev_node_edge_count == 2) {
-            assert(0 && "UNREACHABLE");
-        }
-
-        cfg->nodes[pred].edges[prev_node_edge_count].dst = counter;
-        cfg->nodes[pred].edge_count++;
-    }
+    wire_predecessors(cfg, counter, &preds);
 
     free(preds.data);
 }
