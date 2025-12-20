@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -std=c99 -pedantic -Werror=vla
+CFLAGS=-Wall -Wextra -std=c99 -pedantic -Werror=vla -ggdb
 
 all: main
 

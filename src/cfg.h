@@ -30,7 +30,10 @@ struct CFG_Node{
 
     /*
     Array of edges that *starts* from this point.
-    The size is fixed because one node can have at maximum 2 edges in output (if case).
+
+    The size is fixed because one node can have at maximum 2 edges in output.
+    This is true only for the While Language, because it does not have like
+    switch case and similar.
     */
     CFG_Edge edges[2];
     size_t edge_count;
