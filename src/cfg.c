@@ -45,7 +45,7 @@ static size_t count_nodes(AST_Node *node, size_t counter) {
 }
 
 
-static size_t build_cfg_impl(CFG *cfg, AST_Node *node, size_t counter) {
+static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, int *pred) {
     switch (node->type) {
     case NODE_SKIP:
         /* TODO: like the assign */
@@ -53,43 +53,29 @@ static size_t build_cfg_impl(CFG *cfg, AST_Node *node, size_t counter) {
     case NODE_ASSIGN:
 
         /* Create the assign node */
-        cfg->nodes[counter] = build_node(counter);
-        cfg->nodes[counter].edges[0].src = counter;
-        cfg->nodes[counter].edges[0].dst = -1;
-        cfg->nodes[counter].edges[0].type = EDGE_ASSIGN;
-        cfg->nodes[counter].edges[0].as.assign = node;
-
-        /* TODO: FIND A WAY TO GET THE PREDECESSOR OF A NODE */
+        cfg->nodes[*counter] = build_node(*counter);
+        cfg->nodes[*counter].edges[0].src = *counter;
+        cfg->nodes[*counter].edges[0].dst = -1;
+        cfg->nodes[*counter].edges[0].type = EDGE_ASSIGN;
+        cfg->nodes[*counter].edges[0].as.assign = node;
 
         /* If there is a predecessor node we need to wire an edge to this new node */
-        if (counter > 0) {
-            // size_t prev_node_edge_count = cfg->nodes[counter-1].edge_count;
-            // if (prev_node_edge_count == 2) {
-            //     assert(0 && "UNREACHABLE");
-            // }
+        if (*pred >= 0) {
+            size_t prev_node_edge_count = cfg->nodes[*pred].edge_count;
+            if (prev_node_edge_count == 2) {
+                assert(0 && "UNREACHABLE");
+            }
 
-            // /* While end case */
-            // if (prev_node_edge_count == 1) {
-            //     /* Look for the loop invariant node */
-            //     for (size_t i = counter-1; i != 0; --i) {
-            //         if (cfg->nodes[i].edges[1].type == EDGE_GUARD) {
-            //             cfg->nodes[i].edges[1].dst = counter;
-            //             cfg->nodes[i].edge_count++;
-            //             counter++;
-            //             break;
-            //         }
-            //     }
-            // } else {
-            //     cfg->nodes[counter-1].edges[prev_node_edge_count].dst = counter;
-            //     cfg->nodes[counter-1].edge_count++;
-            // }
+            cfg->nodes[*pred].edges[prev_node_edge_count].dst = *counter;
+            cfg->nodes[*pred].edge_count++;
         }
 
-        counter++;
+        *pred = *counter;
+        *counter += 1;
         break;
     case NODE_SEQ:
-        counter = build_cfg_impl(cfg, node->as.child.left, counter);
-        counter = build_cfg_impl(cfg, node->as.child.right, counter);
+        build_cfg_impl(cfg, node->as.child.left, counter, pred);
+        build_cfg_impl(cfg, node->as.child.right, counter, pred);
         break;
     case NODE_IF:
         // printf("if (P%zu) b then\n", counter++);
@@ -100,61 +86,91 @@ static size_t build_cfg_impl(CFG *cfg, AST_Node *node, size_t counter) {
         break;
     case NODE_WHILE:
         /* Loop invariant Node */
-        const size_t loop_inv = counter;
-        cfg->nodes[counter] = build_node(counter);
+        cfg->nodes[*counter] = build_node(*counter);
 
-        cfg->nodes[counter].edges[0].src = counter;
-        cfg->nodes[counter].edges[0].dst = -1;
-        cfg->nodes[counter].edges[0].type = EDGE_GUARD;
-        cfg->nodes[counter].edges[0].as.guard.condition = node;
-        cfg->nodes[counter].edges[0].as.guard.val = true;
+        cfg->nodes[*counter].edges[0].src = *counter;
+        cfg->nodes[*counter].edges[0].dst = -1;
+        cfg->nodes[*counter].edges[0].type = EDGE_GUARD;
+        cfg->nodes[*counter].edges[0].as.guard.condition = node;
+        cfg->nodes[*counter].edges[0].as.guard.val = true;
 
-        cfg->nodes[counter].edges[1].src = counter;
-        cfg->nodes[counter].edges[1].dst = -1;
-        cfg->nodes[counter].edges[1].type = EDGE_GUARD;
-        cfg->nodes[counter].edges[1].as.guard.condition = node;
-        cfg->nodes[counter].edges[1].as.guard.val = false;
+        cfg->nodes[*counter].edges[1].src = *counter;
+        cfg->nodes[*counter].edges[1].dst = -1;
+        cfg->nodes[*counter].edges[1].type = EDGE_GUARD;
+        cfg->nodes[*counter].edges[1].as.guard.condition = node;
+        cfg->nodes[*counter].edges[1].as.guard.val = false;
 
-        /* TODO: see ASSIGN case */
         /* If there is a predecessor node we need to wire an edge to this new node */
-        if (counter > 0) {
-            // size_t prev_node_edge_count = cfg->nodes[counter-1].edge_count;
-            // if (prev_node_edge_count == 2) {
-            //     assert(0 && "UNREACHABLE");
-            // }
+        if (*pred >= 0) {
+            size_t prev_node_edge_count = cfg->nodes[*pred].edge_count;
+            if (prev_node_edge_count == 2) {
+                assert(0 && "UNREACHABLE");
+            }
 
-            // cfg->nodes[counter-1].edges[prev_node_edge_count].dst = counter;
-            // cfg->nodes[counter-1].edge_count++;
+            cfg->nodes[*pred].edges[prev_node_edge_count].dst = *counter;
+            cfg->nodes[*pred].edge_count++;
         }
 
-        counter++;
+        const size_t loop_inv = *counter;
+        *pred = *counter;
+        *counter += 1;
 
-        counter = build_cfg_impl(cfg, node->as.child.left, counter);
+        build_cfg_impl(cfg, node->as.child.left, counter, pred);
 
-        /* Wire the last added node to the loop invariant node */
-        cfg->nodes[counter-1].edges[0].dst = loop_inv;
-        cfg->nodes[counter-1].edge_count++;
+        /* Wire the last added node (the predecessor) to the loop invariant node */
+        cfg->nodes[*pred].edges[0].dst = loop_inv;
+        cfg->nodes[*pred].edge_count++;
+
+        /* The predecessor of a statement after the while is the loop invariant */
+        *pred = loop_inv;
         break;
     default:
         break;
     }
-    return counter;
 }
 
 static void build_cfg(CFG *cfg, AST_Node *root) {
-    size_t counter = build_cfg_impl(cfg, root, 0);
+    size_t counter = 0;
+    int pred = -1;
+    build_cfg_impl(cfg, root, &counter, &pred);
 
-    /* TODO: Create exit node and wire to the last node */
+    /* Wire to the last node */
+    if (pred >= 0) {
+        size_t prev_node_edge_count = cfg->nodes[pred].edge_count;
+        if (prev_node_edge_count == 2) {
+            assert(0 && "UNREACHABLE");
+        }
+
+        cfg->nodes[pred].edges[prev_node_edge_count].dst = counter;
+        cfg->nodes[pred].edge_count++;
+    }
+
 }
 
-void cfg_print(CFG *cfg) {
+void cfg_print_graphviz(CFG *cfg) {
+    printf("nodes = %zu\n", cfg->count);
+    printf("digraph G {\n");
+    printf("\tnode [shape=circle]\n\n");
     for (size_t i = 0; i < cfg->count; ++i) {
         CFG_Node node = cfg->nodes[i];
-        printf("\n(NODE %zu)", i);
         for (size_t j = 0; j < node.edge_count; ++j) {
-            printf("\n\t[%zu -> %zu] type = %d", node.edges[j].src, node.edges[j].dst, node.edges[j].type);
+            printf("\t%zu -> %zu", node.edges[j].src, node.edges[j].dst);
+            switch (node.edges[j].type) {
+            case EDGE_ASSIGN:
+                const char *var = node.edges[j].as.assign->as.child.left->as.var.str;
+                size_t var_len = node.edges[j].as.assign->as.child.left->as.var.len;
+                printf(" [label=\"ASSIGN %.*s\"]\n", (int)var_len, var);
+                break;
+            case EDGE_GUARD:
+                printf(" [label=\"GUARD\"]\n");
+                break;
+            default:
+                printf("\n");
+                break;
+            }
         }
     }
+    printf("}\n");
 }
 
 CFG_Ctx *cfg_init(const char *src) {
@@ -177,7 +193,7 @@ CFG *cfg_get(CFG_Ctx *ctx) {
         ctx->cfg->count = count_nodes(root, 1);
         ctx->cfg->nodes = xmalloc(sizeof(CFG_Node)*(ctx->cfg->count));
         build_cfg(ctx->cfg, root);
-        cfg_print(ctx->cfg);
+        cfg_print_graphviz(ctx->cfg);
     }
 
     return ctx->cfg;
