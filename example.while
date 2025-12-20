@@ -1,18 +1,9 @@
-while true do
-  x := 1;
-  while true do
-    x := 2;
-    z := 3
-  done;
-  x := 1
-done;
-z := x / y + y;
-
 if true then
-  x := 2;
-  y := 3;
-  x := 10
+  x := 1
 else
-  y := 1
-fi;
-ciao := 1
+  if true then
+     x := 1
+  else
+     z := 1
+   fi
+fi

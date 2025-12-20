@@ -45,6 +45,9 @@ static size_t count_nodes(AST_Node *node, size_t counter) {
 }
 
 
+/*
+TODO: The predecessor MUST be a stack (i can use a dynamic arrat), because
+in the language a node can have an arbitrary number of predecessors. */
 static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, int *pred) {
     switch (node->type) {
     case NODE_SKIP:
