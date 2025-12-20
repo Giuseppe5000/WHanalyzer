@@ -31,6 +31,7 @@ int main(void) {
 
     CFG_Ctx *cfg_ctx = cfg_init(src);
     cfg_get(cfg_ctx);
+    cfg_print_graphviz(cfg_get(cfg_ctx));
 
     cfg_free(cfg_ctx);
     free(src);

@@ -216,6 +216,7 @@ static void build_cfg(CFG *cfg, AST_Node *root) {
 }
 
 void cfg_print_graphviz(CFG *cfg) {
+    printf("https://dreampuf.github.io/GraphvizOnline/?engine=dot#\n");
     printf("digraph G {\n");
     printf("\tnode [shape=circle]\n\n");
     for (size_t i = 0; i < cfg->count; ++i) {
@@ -279,7 +280,6 @@ CFG *cfg_get(CFG_Ctx *ctx) {
         ctx->cfg->count = count_nodes(root, 1);
         ctx->cfg->nodes = xmalloc(sizeof(CFG_Node)*(ctx->cfg->count));
         build_cfg(ctx->cfg, root);
-        cfg_print_graphviz(ctx->cfg);
     }
 
     return ctx->cfg;

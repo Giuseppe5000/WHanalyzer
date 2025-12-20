@@ -52,6 +52,9 @@ CFG_Ctx *cfg_init(const char *src);
 /* Construct and returns the CFG */
 CFG *cfg_get(CFG_Ctx *ctx);
 
+/* Prints to the stdout the Graphviz representation of the CFG */
+void cfg_print_graphviz(CFG *cfg);
+
 /*
 Free the CFG context.
 The CFG returned by 'cfg_get' is also freed.
