@@ -1,4 +1,4 @@
-#include "src/cfg.h"
+#include "src/lang/cfg.h"
 
 #include <stdio.h>
 #include <stdlib.h>

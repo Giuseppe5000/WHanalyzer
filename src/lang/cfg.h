@@ -1,7 +1,7 @@
 #ifndef WHILE_AI_CFG_
 #define WHILE_AI_CFG_
 
-#include "lang/parser.h"
+#include "parser.h"
 
 enum Edge_Type {
     EDGE_ASSIGN,
@@ -46,10 +46,16 @@ typedef struct {
 
 typedef struct CFG_Ctx CFG_Ctx;
 
-/* Init the CFG context using the src */
+/*
+Init the CFG context using the src.
+'src' must be a string buffer and must be null terminated.
+*/
 CFG_Ctx *cfg_init(const char *src);
 
-/* Construct and returns the CFG */
+/*
+Construct and returns the CFG.
+It can be called multiple times, giving the same result.
+*/
 CFG *cfg_get(CFG_Ctx *ctx);
 
 /* Prints to the stdout the Graphviz representation of the CFG */

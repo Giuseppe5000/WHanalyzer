@@ -160,7 +160,7 @@ static AST_Node *parse_factor_aexp(Parser *parser) {
 static AST_Node *parse_term_aexp(Parser *parser) {
     AST_Node *left = parse_factor_aexp(parser);
 
-    /* * and / precedence */
+    /* '*' and '/' precedence */
     Token t = lex_peek(parser->lex);
     while (t.type == TOKEN_MULT || t.type == TOKEN_DIV) {
         lex_next(parser->lex);
@@ -185,7 +185,7 @@ static AST_Node *parse_term_aexp(Parser *parser) {
 static AST_Node *parse_aexp(Parser *parser) {
     AST_Node *left = parse_term_aexp(parser);
 
-    /* - and + precedence */
+    /* '-' and '+' precedence */
     Token t = lex_peek(parser->lex);
     while (t.type == TOKEN_PLUS || t.type == TOKEN_MINUS) {
         lex_next(parser->lex);

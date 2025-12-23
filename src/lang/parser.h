@@ -78,7 +78,10 @@ struct AST_Node {
 
 typedef struct Parser Parser;
 
-/* Parser init */
+/*
+Parser init
+'src' must be a string buffer and must be null terminated.
+*/
 Parser *parser_init(const char *src);
 
 /*
@@ -88,9 +91,13 @@ It can be called multiple times, giving the same result.
 */
 AST_Node *parser_parse(Parser *parser);
 
+/* Prints the ast through the stdout */
 void parser_print_ast(const AST_Node *node);
 
-/* Free the Parser and the AST */
+/*
+Free the Parser.
+The AST returned by 'parser_parse' is also freed.
+*/
 void parser_free(Parser *parser);
 
 #endif /* WHILE_AI_PARSER_ */

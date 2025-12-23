@@ -57,8 +57,8 @@ static void skip_space(Lexer *lex) {
 
 /*
 Check if 'kt.keyword' is pointed by the lexer cursor.
-If yes then returns the token associated with that keyword and updates the cursor.
-Otherwise returns a token with EOF type.
+True case => returns the token associated with that keyword and updates the cursor.
+Otherwise => returns a token with EOF type.
 */
 static Token check_keyword(Lexer *lex, Keyword_Token kt) {
     Token t = {0};
