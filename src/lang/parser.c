@@ -92,6 +92,41 @@ void parser_print_ast(const AST_Node *node) {
     parser_print_ast_impl(node, 0);
 }
 
+AST_Node *parser_copy_node(const AST_Node *node) {
+    if (node != NULL) {
+
+        /* Leaf nodes */
+        if (node->type == NODE_NUM || node->type == NODE_VAR || node->type == NODE_BOOL_LITERAL) {
+            AST_Node *node_copy = xmalloc(sizeof(AST_Node));
+            node_copy->type = node->type;
+
+            if (node->type == NODE_NUM) {
+                node_copy->as.num = node->as.num;
+            }
+            else if (node->type == NODE_VAR) {
+                node_copy->as.var.str = node->as.var.str;
+                node_copy->as.var.len = node->as.var.len;
+            }
+            else if (node->type == NODE_BOOL_LITERAL) {
+                node_copy->as.boolean = node->as.boolean;
+            }
+
+            return node_copy;
+        }
+        else {
+            AST_Node *node_copy = xmalloc(sizeof(AST_Node));
+            node_copy->type = node->type;
+
+            node_copy->as.child.left = parser_copy_node(node->as.child.left);
+            node_copy->as.child.right = parser_copy_node(node->as.child.right);
+            node_copy->as.child.condition = parser_copy_node(node->as.child.condition);
+
+            return node_copy;
+        }
+    }
+
+    return NULL;
+}
 
 /* ============================= Recursive descent parser ============================= */
 /* https://en.wikipedia.org/wiki/Recursive_descent_parser */

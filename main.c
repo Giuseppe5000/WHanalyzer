@@ -37,15 +37,14 @@ int main(void) {
 
     /* AST */
     AST_Node *ast = parser_parse(lex);
+    lex_free(lex);
 
     /* CFG */
     CFG *cfg = cfg_get(ast);
-    cfg_print_graphviz(cfg);
-
-    /* Free */
-    free(src);
-    lex_free(lex);
     parser_free_ast(ast);
+    cfg_print_graphviz(cfg);
     cfg_free(cfg);
+
+    free(src);
     return 0;
 }

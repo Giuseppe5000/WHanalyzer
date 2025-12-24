@@ -107,7 +107,7 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         cfg->nodes[*counter].edges[0].dst = -1;
         enum Edge_Type type = node->type == NODE_ASSIGN ? EDGE_ASSIGN : EDGE_SKIP;
         cfg->nodes[*counter].edges[0].type = type;
-        cfg->nodes[*counter].edges[0].as.assign = node;
+        cfg->nodes[*counter].edges[0].as.assign = parser_copy_node(node);
 
         wire_predecessors(cfg, *counter, preds);
 
@@ -125,13 +125,13 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         cfg->nodes[*counter].edges[0].src = *counter;
         cfg->nodes[*counter].edges[0].dst = -1;
         cfg->nodes[*counter].edges[0].type = EDGE_GUARD;
-        cfg->nodes[*counter].edges[0].as.guard.condition = node->as.child.condition;
+        cfg->nodes[*counter].edges[0].as.guard.condition = parser_copy_node(node->as.child.condition);
         cfg->nodes[*counter].edges[0].as.guard.val = true;
 
         cfg->nodes[*counter].edges[1].src = *counter;
         cfg->nodes[*counter].edges[1].dst = -1;
         cfg->nodes[*counter].edges[1].type = EDGE_GUARD;
-        cfg->nodes[*counter].edges[1].as.guard.condition = node->as.child.condition;
+        cfg->nodes[*counter].edges[1].as.guard.condition = parser_copy_node(node->as.child.condition);
         cfg->nodes[*counter].edges[1].as.guard.val = false;
 
         wire_predecessors(cfg, *counter, preds);
@@ -173,13 +173,13 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         cfg->nodes[*counter].edges[0].src = *counter;
         cfg->nodes[*counter].edges[0].dst = -1;
         cfg->nodes[*counter].edges[0].type = EDGE_GUARD;
-        cfg->nodes[*counter].edges[0].as.guard.condition = node->as.child.condition;
+        cfg->nodes[*counter].edges[0].as.guard.condition = parser_copy_node(node->as.child.condition);
         cfg->nodes[*counter].edges[0].as.guard.val = true;
 
         cfg->nodes[*counter].edges[1].src = *counter;
         cfg->nodes[*counter].edges[1].dst = -1;
         cfg->nodes[*counter].edges[1].type = EDGE_GUARD;
-        cfg->nodes[*counter].edges[1].as.guard.condition = node->as.child.condition;
+        cfg->nodes[*counter].edges[1].as.guard.condition = parser_copy_node(node->as.child.condition);
         cfg->nodes[*counter].edges[1].as.guard.val = false;
 
         wire_predecessors(cfg, *counter, preds);
