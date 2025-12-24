@@ -25,6 +25,8 @@ typedef struct {
     size_t count;
 } Abstract_Int_State;
 
+/* TODO: maybe I can put this struct in the implementation, making opaque */
+
 /*
 Create an Abstract State in the domain of parametric intervals (m,n)
 with all variables (defined in 'var_names') set to bottom/top depending on the specific function.
@@ -44,11 +46,18 @@ Abstract_Int_State *abstract_int_state_init_top(int64_t m, int64_t n, const char
 /* Abstract commands */
 Abstract_Int_State *abstract_int_state_exec_command(const Abstract_Int_State *s, const AST_Node *command);
 
+/* Compare */
+bool abstract_int_state_leq(const Abstract_Int_State *s1, const Abstract_Int_State *s2);
+
 /* Union */
 Abstract_Int_State *abstract_int_state_union(const Abstract_Int_State *s1, const Abstract_Int_State *s2);
 
 /* Widening */
 Abstract_Int_State *abstract_int_state_widening(const Abstract_Int_State *s1, const Abstract_Int_State *s2);
+
+/* Narrowing */
+Abstract_Int_State *abstract_int_state_narrowing(const Abstract_Int_State *s1, const Abstract_Int_State *s2);
+
 
 /* Free the abstract state */
 void abstract_int_state_free(Abstract_Int_State *s);
