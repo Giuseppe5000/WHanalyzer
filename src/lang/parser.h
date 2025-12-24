@@ -76,28 +76,16 @@ struct AST_Node {
     } as;
 };
 
-typedef struct Parser Parser;
-
-/*
-Parser init
-'src' must be a string buffer and must be null terminated.
-*/
-Parser *parser_init(const char *src);
-
 /*
 Parse the program according to the grammar.
 Returns the root node of the AST.
-It can be called multiple times, giving the same result.
 */
-AST_Node *parser_parse(Parser *parser);
+AST_Node *parser_parse(Lexer *lex);
 
 /* Prints the ast through the stdout */
 void parser_print_ast(const AST_Node *node);
 
-/*
-Free the Parser.
-The AST returned by 'parser_parse' is also freed.
-*/
-void parser_free(Parser *parser);
+/* Free the AST */
+void parser_free_ast(AST_Node *node);
 
 #endif /* WHILE_AI_PARSER_ */

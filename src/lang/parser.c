@@ -4,20 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 
-struct Parser {
-    Lexer *lex;
-    AST_Node *root;
-};
-
-Parser *parser_init(const char *src) {
-    Parser *parser = xmalloc(sizeof(Parser));
-    parser->lex = lex_init(src);
-    parser->root = NULL;
-
-    return parser;
-}
-
-static void free_node(AST_Node *node) {
+void parser_free_ast(AST_Node *node) {
     if (node != NULL) {
 
         /* Leaf nodes */
@@ -25,18 +12,12 @@ static void free_node(AST_Node *node) {
             free(node);
         }
         else {
-            free_node(node->as.child.left);
-            free_node(node->as.child.right);
-            free_node(node->as.child.condition);
+            parser_free_ast(node->as.child.left);
+            parser_free_ast(node->as.child.right);
+            parser_free_ast(node->as.child.condition);
             free(node);
         }
     }
-}
-
-void parser_free(Parser *parser) {
-    lex_free(parser->lex);
-    free_node(parser->root);
-    free(parser);
 }
 
 static void parser_print_ast_impl(const AST_Node *node, int indent) {
@@ -115,8 +96,8 @@ void parser_print_ast(const AST_Node *node) {
 /* ============================= Recursive descent parser ============================= */
 /* https://en.wikipedia.org/wiki/Recursive_descent_parser */
 
-static AST_Node *parse_stmt(Parser *parser);
-static AST_Node *parse_bexp(Parser *parser);
+static AST_Node *parse_stmt(Lexer *lex);
+static AST_Node *parse_bexp(Lexer *lex);
 
 /* Alloc a zero initialized AST node */
 static AST_Node *create_node(enum Node_Type type) {
@@ -133,8 +114,8 @@ static void expect(Token t, enum Token_Type type) {
     }
 }
 
-static AST_Node *parse_factor_aexp(Parser *parser) {
-    Token t = lex_next(parser->lex);
+static AST_Node *parse_factor_aexp(Lexer *lex) {
+    Token t = lex_next(lex);
 
     /* Numeral */
     if (t.type == TOKEN_NUM) {
@@ -157,13 +138,13 @@ static AST_Node *parse_factor_aexp(Parser *parser) {
     exit(1);
 }
 
-static AST_Node *parse_term_aexp(Parser *parser) {
-    AST_Node *left = parse_factor_aexp(parser);
+static AST_Node *parse_term_aexp(Lexer *lex) {
+    AST_Node *left = parse_factor_aexp(lex);
 
     /* '*' and '/' precedence */
-    Token t = lex_peek(parser->lex);
+    Token t = lex_peek(lex);
     while (t.type == TOKEN_MULT || t.type == TOKEN_DIV) {
-        lex_next(parser->lex);
+        lex_next(lex);
 
         AST_Node *node = NULL;
         if (t.type == TOKEN_MULT) {
@@ -173,22 +154,22 @@ static AST_Node *parse_term_aexp(Parser *parser) {
         }
 
         node->as.child.left = left;
-        node->as.child.right = parse_factor_aexp(parser);
+        node->as.child.right = parse_factor_aexp(lex);
         left = node;
 
-        t = lex_peek(parser->lex);
+        t = lex_peek(lex);
     }
 
     return left;
 }
 
-static AST_Node *parse_aexp(Parser *parser) {
-    AST_Node *left = parse_term_aexp(parser);
+static AST_Node *parse_aexp(Lexer *lex) {
+    AST_Node *left = parse_term_aexp(lex);
 
     /* '-' and '+' precedence */
-    Token t = lex_peek(parser->lex);
+    Token t = lex_peek(lex);
     while (t.type == TOKEN_PLUS || t.type == TOKEN_MINUS) {
-        lex_next(parser->lex);
+        lex_next(lex);
 
         AST_Node *node = NULL;
         if (t.type == TOKEN_PLUS) {
@@ -198,21 +179,21 @@ static AST_Node *parse_aexp(Parser *parser) {
         }
 
         node->as.child.left = left;
-        node->as.child.right = parse_term_aexp(parser);
+        node->as.child.right = parse_term_aexp(lex);
         left = node;
 
-        t = lex_peek(parser->lex);
+        t = lex_peek(lex);
     }
 
     return left;
 }
 
-static AST_Node *parse_atom_bexp(Parser *parser) {
-    Token t = lex_peek(parser->lex);
+static AST_Node *parse_atom_bexp(Lexer *lex) {
+    Token t = lex_peek(lex);
 
     /* True */
     if (t.type == TOKEN_TRUE) {
-        lex_next(parser->lex);
+        lex_next(lex);
         AST_Node *bool_lit_node = create_node(NODE_BOOL_LITERAL);
         bool_lit_node->as.boolean = true;
         return bool_lit_node;
@@ -220,7 +201,7 @@ static AST_Node *parse_atom_bexp(Parser *parser) {
 
     /* False */
     if (t.type == TOKEN_FALSE) {
-        lex_next(parser->lex);
+        lex_next(lex);
         AST_Node *bool_lit_node = create_node(NODE_BOOL_LITERAL);
         bool_lit_node->as.boolean = false;
         return bool_lit_node;
@@ -228,21 +209,21 @@ static AST_Node *parse_atom_bexp(Parser *parser) {
 
     /* Not */
     if (t.type == TOKEN_NOT) {
-        lex_next(parser->lex);
+        lex_next(lex);
         AST_Node *not_node = create_node(NODE_NOT);
-        not_node->as.child.left = parse_bexp(parser);
+        not_node->as.child.left = parse_bexp(lex);
         return not_node;
     }
 
     /* It can be EQ or LEQ */
-    AST_Node *left = parse_aexp(parser);
-    t = lex_next(parser->lex);
+    AST_Node *left = parse_aexp(lex);
+    t = lex_next(lex);
 
     /* EQ */
     if (t.type == TOKEN_EQ) {
         AST_Node *eq_node = create_node(NODE_EQ);
         eq_node->as.child.left = left;
-        eq_node->as.child.right = parse_aexp(parser);
+        eq_node->as.child.right = parse_aexp(lex);
         return eq_node;
     }
 
@@ -250,7 +231,7 @@ static AST_Node *parse_atom_bexp(Parser *parser) {
     if (t.type == TOKEN_LEQ) {
         AST_Node *leq_node = create_node(NODE_LEQ);
         leq_node->as.child.left = left;
-        leq_node->as.child.right = parse_aexp(parser);
+        leq_node->as.child.right = parse_aexp(lex);
         return leq_node;
     }
 
@@ -258,24 +239,24 @@ static AST_Node *parse_atom_bexp(Parser *parser) {
     exit(1);
 }
 
-static AST_Node *parse_bexp(Parser *parser) {
-    AST_Node *left = parse_atom_bexp(parser);
+static AST_Node *parse_bexp(Lexer *lex) {
+    AST_Node *left = parse_atom_bexp(lex);
 
-    Token t = lex_peek(parser->lex);
+    Token t = lex_peek(lex);
     while (t.type == TOKEN_AND) {
-        lex_next(parser->lex);
+        lex_next(lex);
 
         AST_Node *and_node = create_node(NODE_AND);
         and_node->as.child.left = left;
-        and_node->as.child.right = parse_atom_bexp(parser);
+        and_node->as.child.right = parse_atom_bexp(lex);
         left = and_node;
     }
 
     return left;
 }
 
-static AST_Node *parse_atom_stmt(Parser *parser) {
-    Token t = lex_next(parser->lex);
+static AST_Node *parse_atom_stmt(Lexer *lex) {
+    Token t = lex_next(lex);
 
     /* Assignment */
     if (t.type == TOKEN_VAR) {
@@ -286,13 +267,13 @@ static AST_Node *parse_atom_stmt(Parser *parser) {
         var_node->as.var.len = t.as.str.len;
 
         /* Assing symbol (:=) */
-        t = lex_next(parser->lex);
+        t = lex_next(lex);
         expect(t, TOKEN_ASSIGN);
 
         /* Aexp */
         AST_Node *assign_node = create_node(NODE_ASSIGN);
         assign_node->as.child.left = var_node;
-        assign_node->as.child.right = parse_aexp(parser);
+        assign_node->as.child.right = parse_aexp(lex);
 
         return assign_node;
     }
@@ -308,24 +289,24 @@ static AST_Node *parse_atom_stmt(Parser *parser) {
         AST_Node *if_node = create_node(NODE_IF);
 
         /* Condition (b) */
-        if_node->as.child.condition = parse_bexp(parser);
+        if_node->as.child.condition = parse_bexp(lex);
 
         /* Then symbol */
-        t = lex_next(parser->lex);
+        t = lex_next(lex);
         expect(t, TOKEN_THEN);
 
         /* S1 */
-        if_node->as.child.left = parse_stmt(parser);
+        if_node->as.child.left = parse_stmt(lex);
 
         /* Else symbol */
-        t = lex_next(parser->lex);
+        t = lex_next(lex);
         expect(t, TOKEN_ELSE);
 
         /* S2 */
-        if_node->as.child.right = parse_stmt(parser);
+        if_node->as.child.right = parse_stmt(lex);
 
         /* Fi symbol */
-        t = lex_next(parser->lex);
+        t = lex_next(lex);
         expect(t, TOKEN_FI);
 
         return if_node;
@@ -336,17 +317,17 @@ static AST_Node *parse_atom_stmt(Parser *parser) {
         AST_Node *while_node = create_node(NODE_WHILE);
 
         /* Condition (b) */
-        while_node->as.child.condition = parse_bexp(parser);
+        while_node->as.child.condition = parse_bexp(lex);
 
         /* Do symbol */
-        t = lex_next(parser->lex);
+        t = lex_next(lex);
         expect(t, TOKEN_DO);
 
         /* S */
-        while_node->as.child.left = parse_stmt(parser);
+        while_node->as.child.left = parse_stmt(lex);
 
         /* Done symbol */
-        t = lex_next(parser->lex);
+        t = lex_next(lex);
         expect(t, TOKEN_DONE);
 
         return while_node;
@@ -357,26 +338,24 @@ static AST_Node *parse_atom_stmt(Parser *parser) {
 }
 
 /* Parse the sequence statements */
-static AST_Node *parse_stmt(Parser *parser) {
-    AST_Node *left = parse_atom_stmt(parser);
+static AST_Node *parse_stmt(Lexer *lex) {
+    AST_Node *left = parse_atom_stmt(lex);
 
-    Token t = lex_peek(parser->lex);
+    Token t = lex_peek(lex);
     if (t.type == TOKEN_SEMICOL) {
-        lex_next(parser->lex);
+        lex_next(lex);
         AST_Node *node = create_node(NODE_SEQ);
         node->as.child.left = left;
-        node->as.child.right = parse_stmt(parser);
+        node->as.child.right = parse_stmt(lex);
         return node;
     }
 
     return left;
 }
 
-AST_Node *parser_parse(Parser *parser) {
-    if (parser->root == NULL) {
-        parser->root = parse_stmt(parser);
-    }
-    return parser->root;
+AST_Node *parser_parse(Lexer *lex) {
+    AST_Node *root = parse_stmt(lex);
+    return root;
 }
 
 /* ==================================================================================== */

@@ -44,27 +44,13 @@ typedef struct {
     CFG_Node *nodes;
 } CFG;
 
-typedef struct CFG_Ctx CFG_Ctx;
-
-/*
-Init the CFG context using the src.
-'src' must be a string buffer and must be null terminated.
-*/
-CFG_Ctx *cfg_init(const char *src);
-
-/*
-Construct and returns the CFG.
-It can be called multiple times, giving the same result.
-*/
-CFG *cfg_get(CFG_Ctx *ctx);
+/* Construct and returns the CFG */
+CFG *cfg_get(AST_Node *root);
 
 /* Prints to the stdout the Graphviz representation of the CFG */
 void cfg_print_graphviz(CFG *cfg);
 
-/*
-Free the CFG context.
-The CFG returned by 'cfg_get' is also freed.
-*/
-void cfg_free(CFG_Ctx *ctx);
+/* Free the CFG */
+void cfg_free(CFG *cfg);
 
 #endif /* WHILE_AI_CFG_ */

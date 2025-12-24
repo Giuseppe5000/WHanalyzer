@@ -1,4 +1,7 @@
+#include "src/lang/lexer.h"
+#include "src/lang/parser.h"
 #include "src/lang/cfg.h"
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,11 +32,20 @@ int main(void) {
     src[file_size] = '\0';
     fclose(fp);
 
-    CFG_Ctx *cfg_ctx = cfg_init(src);
-    cfg_get(cfg_ctx);
-    cfg_print_graphviz(cfg_get(cfg_ctx));
+    /* Lexer */
+    Lexer *lex = lex_init(src);
 
-    cfg_free(cfg_ctx);
+    /* AST */
+    AST_Node *ast = parser_parse(lex);
+
+    /* CFG */
+    CFG *cfg = cfg_get(ast);
+    cfg_print_graphviz(cfg);
+
+    /* Free */
     free(src);
+    lex_free(lex);
+    parser_free_ast(ast);
+    cfg_free(cfg);
     return 0;
 }

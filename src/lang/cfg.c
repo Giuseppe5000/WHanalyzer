@@ -6,11 +6,6 @@
 #include <assert.h>
 #include <string.h>
 
-struct CFG_Ctx {
-    CFG *cfg;
-    Parser *parser;
-};
-
 static CFG_Node build_node(size_t id) {
     CFG_Node node = {
         .id = id,
@@ -260,36 +255,16 @@ void cfg_print_graphviz(CFG *cfg) {
     printf("}\n");
 }
 
-CFG_Ctx *cfg_init(const char *src) {
-    CFG_Ctx *ctx = xmalloc(sizeof(CFG_Ctx));
+CFG *cfg_get(AST_Node *root) {
+    CFG *cfg = xmalloc(sizeof(CFG));
+    cfg->count = count_nodes(root, 1);
+    cfg->nodes = xmalloc(sizeof(CFG_Node)*(cfg->count));
+    build_cfg(cfg, root);
 
-    /* Parser init */
-    ctx->parser = parser_init(src);
-
-    /* CFG init */
-    ctx->cfg = NULL;
-
-    return ctx;
+    return cfg;
 }
 
-CFG *cfg_get(CFG_Ctx *ctx) {
-    if (ctx->cfg == NULL) {
-        /* Alloc and build */
-        AST_Node *root = parser_parse(ctx->parser);
-        ctx->cfg = xmalloc(sizeof(CFG));
-        ctx->cfg->count = count_nodes(root, 1);
-        ctx->cfg->nodes = xmalloc(sizeof(CFG_Node)*(ctx->cfg->count));
-        build_cfg(ctx->cfg, root);
-    }
-
-    return ctx->cfg;
-}
-
-void cfg_free(CFG_Ctx *ctx) {
-    parser_free(ctx->parser);
-    if (ctx->cfg != NULL) {
-        free(ctx->cfg->nodes);
-        free(ctx->cfg);
-    }
-    free(ctx);
+void cfg_free(CFG *cfg) {
+    free(cfg->nodes);
+    free(cfg);
 }

@@ -17,7 +17,8 @@ Then apply the worklist algorithm and return the fixpoint.
 typedef void Abstract_State;
 
 struct While_Analyzer {
-    CFG_Ctx *cfg_ctx;
+    AST_Node *ast;
+    CFG *cfg;
     Abstract_State **state;
     char *src;
     struct {
@@ -65,13 +66,17 @@ While_Analyzer *while_analyzer_init_parametric_interval(const char *src_path) {
     While_Analyzer *wa = xmalloc(sizeof(While_Analyzer));
     wa->src = src;
 
-    /* Init CFG */
-    wa->cfg_ctx = cfg_init(wa->src);
+    /* Lexer */
+    Lexer *lex = lex_init(src);
 
+    /* AST */
+    wa->ast = parser_parse(lex);
+    lex_free(lex);
 
+    /* Get CFG */
+    wa->cfg = cfg_get(wa->ast);
 
     /* TODO: get all variable names from CFG */
-
     wa->state = NULL; // xmalloc...
 
     /* TODO: link all domain functions */
@@ -85,7 +90,8 @@ While_Analyzer *while_analyzer_init_parametric_interval(const char *src_path) {
 
 void while_analyzer_free(While_Analyzer *wa) {
     free(wa->src);
-    cfg_free(wa->cfg_ctx);
+    parser_free_ast(wa->ast);
+    cfg_free(wa->cfg);
     free(wa->state);
     free(wa);
 }
