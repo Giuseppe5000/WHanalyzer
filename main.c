@@ -41,7 +41,7 @@ int main(void) {
 
     /* CFG */
     CFG *cfg = cfg_get(ast);
-    parser_free_ast(ast);
+    parser_free_ast_node(ast);
     cfg_print_graphviz(cfg);
     cfg_free(cfg);
 

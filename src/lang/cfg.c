@@ -107,7 +107,9 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         cfg->nodes[*counter].edges[0].dst = -1;
         enum Edge_Type type = node->type == NODE_ASSIGN ? EDGE_ASSIGN : EDGE_SKIP;
         cfg->nodes[*counter].edges[0].type = type;
-        cfg->nodes[*counter].edges[0].as.assign = parser_copy_node(node);
+        if (node->type == NODE_ASSIGN) {
+            cfg->nodes[*counter].edges[0].as.assign = parser_copy_node(node);
+        }
 
         wire_predecessors(cfg, *counter, preds);
 
@@ -265,6 +267,20 @@ CFG *cfg_get(AST_Node *root) {
 }
 
 void cfg_free(CFG *cfg) {
+    /* Free the AST nodes in the edges */
+    for (size_t i = 0; i < cfg->count; ++i) {
+        CFG_Node node = cfg->nodes[i];
+        for (size_t j = 0; j < node.edge_count; ++j) {
+            CFG_Edge edge = node.edges[j];
+            if (edge.type == EDGE_ASSIGN) {
+                parser_free_ast_node(edge.as.assign);
+            }
+            else if (edge.type == EDGE_GUARD) {
+                parser_free_ast_node(edge.as.guard.condition);
+            }
+        }
+    }
+
     free(cfg->nodes);
     free(cfg);
 }

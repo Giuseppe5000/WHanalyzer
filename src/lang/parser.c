@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 
-void parser_free_ast(AST_Node *node) {
+void parser_free_ast_node(AST_Node *node) {
     if (node != NULL) {
 
         /* Leaf nodes */
@@ -12,9 +12,9 @@ void parser_free_ast(AST_Node *node) {
             free(node);
         }
         else {
-            parser_free_ast(node->as.child.left);
-            parser_free_ast(node->as.child.right);
-            parser_free_ast(node->as.child.condition);
+            parser_free_ast_node(node->as.child.left);
+            parser_free_ast_node(node->as.child.right);
+            parser_free_ast_node(node->as.child.condition);
             free(node);
         }
     }

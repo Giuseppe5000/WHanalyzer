@@ -88,7 +88,7 @@ void parser_print_ast(const AST_Node *node);
 /* Returns an dynamic allocated copy of the tree in 'node' */
 AST_Node *parser_copy_node(const AST_Node *node);
 
-/* Free the AST */
-void parser_free_ast(AST_Node *node);
+/* Free the AST node subtree */
+void parser_free_ast_node(AST_Node *node);
 
 #endif /* WHILE_AI_PARSER_ */

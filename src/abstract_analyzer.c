@@ -74,7 +74,7 @@ While_Analyzer *while_analyzer_init_parametric_interval(const char *src_path) {
 
     /* Get CFG */
     wa->cfg = cfg_get(ast);
-    parser_free_ast(ast);
+    parser_free_ast_node(ast);
 
     /* TODO: get all variable names from CFG */
     wa->state = NULL; // xmalloc...
