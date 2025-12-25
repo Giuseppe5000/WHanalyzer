@@ -43,7 +43,7 @@ struct While_Analyzer {
 
     /* Functions needed for the analysis, dynamically setted to the chosen domain */
     struct {
-        Abstract_State (*state_free)(Abstract_State *s);
+        void (*state_free)(Abstract_State *s);
         Abstract_State *(*exec_command) (const Abstract_State *s, const AST_Node *command);
         bool (*abstract_state_leq) (const Abstract_State *s1, const Abstract_State *s2);
         Abstract_State *(*U) (const Abstract_State *s1, const Abstract_State *s2); /* Union */
@@ -54,6 +54,10 @@ struct While_Analyzer {
 
 
 /* =================== Parametric interval domain Int(m,n) wrappers =================== */
+void abstract_int_state_free_wrap(Abstract_State *s) {
+    abstract_int_state_free((Interval *) s);
+}
+
 // bool abstract_int_state_leq_wrap(const Abstract_State *s1, const Abstract_State *s2) {
 //     return abstract_int_state_leq((const Abstract_Int_State *) s1, (const Abstract_Int_State *) s2);
 // }
@@ -140,14 +144,15 @@ static While_Analyzer *while_analyzer_init(const char *src_path) {
     return wa;
 }
 
-While_Analyzer *while_analyzer_init_parametric_interval(const char *src_path) {
+While_Analyzer *while_analyzer_init_parametric_interval(const char *src_path, int64_t m, int64_t n) {
     While_Analyzer *wa = while_analyzer_init(src_path);
 
-    /* TODO */
     /* Alloc abstract states for all program points */
-    // wa->state = (Abstract_State *)abstract_int_state_init(var_names, var_count, wa->cfg->count);
+    abstract_int_configure(m, n, wa->var_count);
+    wa->state = (Abstract_State *)abstract_int_state_init(wa->cfg->count);
 
     /* TODO: link all domain functions */
+    wa->func.state_free = abstract_int_state_free_wrap;
     // wa->func.abstract_state_leq = abstract_int_state_leq_wrap;
 
     return wa;
@@ -160,6 +165,6 @@ void while_analyzer_free(While_Analyzer *wa) {
     free(wa->src);
     cfg_free(wa->cfg);
     free(wa->vars);
-    // free(wa->state);
+    wa->func.state_free(wa->state);
     free(wa);
 }
