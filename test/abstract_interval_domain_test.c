@@ -6,7 +6,8 @@ void interval_create_test(void) {
     /* m,n integers */
     int64_t m = -10;
     int64_t n = 10;
-    abstract_int_set_params(m, n);
+    size_t var_count = 5; /* Unused */
+    abstract_int_configure(m, n, var_count);
     Interval i = {0};
 
     i = interval_create(3, 2);
@@ -39,7 +40,7 @@ void interval_create_test(void) {
     /* m,n infinite */
     m = INTERVAL_MIN_INF;
     n = INTERVAL_PLUS_INF;
-    abstract_int_set_params(m, n);
+    abstract_int_configure(m, n, var_count);
 
     i = interval_create(3, 2);
     assert(i.type == INTERVAL_BOTTOM);

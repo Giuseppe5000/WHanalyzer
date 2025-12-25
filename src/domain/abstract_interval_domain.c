@@ -17,25 +17,16 @@ If a or b are INF, then their value is:
     INTERVAL_PLUS_INF for represent infinite.
     INTERVAL_MIN_INF for represent -infinite.
 */
-typedef struct {
+struct Interval {
     enum Interval_Type type;
     int64_t a;
     int64_t b;
-} Interval;
-
-/*
-The Abstract State is an array of variables
-represented within the domain of intervals.
-*/
-struct Abstract_Int_State {
-    Interval *values;
-    const char **var_names;
-    size_t var_count;
 };
 
 /* By default the Interval is standard Int domain */
-int64_t int_m = INTERVAL_MIN_INF;
-int64_t int_n = INTERVAL_PLUS_INF;
+static int64_t int_m = INTERVAL_MIN_INF;
+static int64_t int_n = INTERVAL_PLUS_INF;
+static size_t var_count = 0;
 
 /* ================================== Interval ops ==================================== */
 
@@ -134,28 +125,35 @@ static Interval interval_create(int64_t a, int64_t b) {
 
 /* ==================================================================================== */
 
-void abstract_int_set_params(int64_t m, int64_t n) {
+void abstract_int_configure(int64_t m, int64_t n, size_t _var_count) {
     int_m = m;
     int_n = n;
+    var_count = _var_count;
 }
 
-Abstract_Int_State *abstract_int_state_init_bottom(const char **var_names, size_t var_count) {
-    Abstract_Int_State *s = xmalloc(sizeof(Abstract_Int_State));
-    s->var_count = var_count;
+Interval *abstract_int_state_init(size_t count) {
+    Interval *s = xmalloc(sizeof(Interval) * var_count * count);
 
-    /* Copy the pointer to the variables string (allocated in the AST) */
-    s->var_names = xmalloc(sizeof(char*) * var_count);
-    memcpy(s->var_names, var_names, sizeof(char*) * var_count);
-
-    /* Since BOTTOM enum = 0, all the vars will be bottom */
-    s->values = xmalloc(sizeof(Interval) * var_count);
-    memset(s->values, 0, sizeof(Interval) * var_count);
+    /* By default set all to bottom*/
+    memset(s, 0, sizeof(Interval) * var_count * count);
 
     return s;
 }
 
-void abstract_int_state_free(Abstract_Int_State *s) {
-    free(s->values);
-    free(s->var_names);
+void abstract_int_state_set_bottom(Interval *s) {
+    /* Since BOTTOM enum = 0, all the vars will be bottom */
+    memset(s, 0, sizeof(Interval) * var_count);
+}
+
+void abstract_int_state_set_top(Interval *s) {
+    /* Set every interval to TOP */
+    for (size_t i = 0; i < var_count; ++i) {
+        s[i].type = INTERVAL_STD;
+        s[i].a = INTERVAL_MIN_INF;
+        s[i].b = INTERVAL_PLUS_INF;
+    }
+}
+
+void abstract_int_state_free(Interval *s) {
     free(s);
 }
