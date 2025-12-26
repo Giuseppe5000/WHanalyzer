@@ -2,6 +2,7 @@
 #include "../common.h"
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #define INTERVAL_PLUS_INF INT64_MAX
 #define INTERVAL_MIN_INF INT64_MIN
@@ -126,10 +127,10 @@ static Interval interval_union(const Abstract_Interval_Ctx *ctx, Interval i1, In
         return i1;
     }
     /* Top handling */
-    else if (i1.type == INTERVAL_STD && i1.a == INTERVAL_MIN_INF && i1.b == INTERVAL_PLUS_INF) {
+    else if (i1.a == INTERVAL_MIN_INF && i1.b == INTERVAL_PLUS_INF) {
         return i1;
     }
-    else if (i2.type == INTERVAL_STD && i2.a == INTERVAL_MIN_INF && i2.b == INTERVAL_PLUS_INF) {
+    else if (i2.a == INTERVAL_MIN_INF && i2.b == INTERVAL_PLUS_INF) {
         return i2;
     }
     /* Other cases */
@@ -204,7 +205,58 @@ static Interval interval_union(const Abstract_Interval_Ctx *ctx, Interval i1, In
 // static Interval interval_intersect(const Abstract_Int_State *s, Interval a, Interval b);
 
 /* Arithmetic operations on intervals */
-// static Interval interval_plus(const Abstract_Int_State *s, Interval a, Interval b);
+
+/* Returns true if a+b will produce an integer overflow */
+static bool integer_plus_overflow_check(int64_t a, int64_t b) {
+    if (b > 0) {
+        /* If a + b > INT64_MAX there is an overflow */
+        return a > (INT64_MAX - b);
+    } else if (b < 0) {
+        /* If a + b < INT64_MIN there is an overflow */
+        return a < (INT64_MIN - b);
+    }
+    return false;
+}
+
+static Interval interval_plus(const Abstract_Interval_Ctx *ctx, Interval i1, Interval i2) {
+    /* Bottom handling */
+    if (i1.type == INTERVAL_BOTTOM) {
+        return i1;
+    }
+    else if (i2.type == INTERVAL_BOTTOM) {
+        return i2;
+    }
+    /* Top handling */
+    else if (i1.a == INTERVAL_MIN_INF && i1.b == INTERVAL_PLUS_INF) {
+        return i1;
+    }
+    else if (i2.a == INTERVAL_MIN_INF && i2.b == INTERVAL_PLUS_INF) {
+        return i2;
+    }
+    /* Other cases */
+    else {
+        int64_t a;
+        int64_t b;
+
+        /* Check if i1 + i2 will produce overflow */
+        if (integer_plus_overflow_check(i1.a, i2.a) || integer_plus_overflow_check(i1.b, i2.b)) {
+            assert(0 && "Overflow detected in interval_plus function!"); /* TODO: What to do with an overflow? */
+        } else {
+            a = i1.a + i2.a;
+            b = i1.b + i2.b;
+        }
+
+        /* Cases (-INF, k] and [k, +INF) */
+        if (i1.a == INTERVAL_MIN_INF || i2.a == INTERVAL_MIN_INF) {
+            a = INTERVAL_MIN_INF;
+        }
+        else if (i1.b == INTERVAL_PLUS_INF || i2.b == INTERVAL_PLUS_INF) {
+            b = INTERVAL_PLUS_INF;
+        }
+
+        return interval_create(ctx, a, b);
+    }
+}
 // static Interval interval_minus(const Abstract_Int_State *s, Interval a, Interval b);
 // static Interval interval_mult(const Abstract_Int_State *s, Interval a, Interval b);
 // static Interval interval_div(const Abstract_Int_State *s, Interval a, Interval b);

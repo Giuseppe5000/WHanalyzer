@@ -228,13 +228,31 @@ void interval_union_test(void) {
     { [k, +INF) | k ∈ [m, n] } */
 }
 
+void interval_plus_test(void) {
+    /* m,n integers */
+    int64_t m = -10;
+    int64_t n = 10;
+    Abstract_Interval_Ctx *ctx = abstract_interval_ctx_init(m, n, NULL, 0);
+    Interval i1 = {0};
+    Interval i2 = {0};
+    Interval i_plus = {0};
+
+    i1 = interval_create(ctx, 1, -1); /* Bottom */
+    i2 = interval_create(ctx, 1, -1); /* Bottom */
+    i_plus = interval_plus(ctx, i1, i2);
+    assert(i_plus.type == INTERVAL_BOTTOM);
+
+    /* TODO: finish */
+}
+
 int main(void) {
     interval_leq_test();
-    printf("[OK]: interval_leq_test pass.\n");
+    printf("[TEST PASS]: interval_leq\n");
     interval_create_test();
-    printf("[OK]: interval_create_test pass.\n");
+    printf("[TEST PASS]: interval_create\n");
     interval_union_test();
-    printf("[OK]: interval_union_test, test pass.\n");
-
+    printf("[TEST PASS]: interval_union\n");
+    interval_plus_test();
+    printf("[TEST PASS]: interval_plus\n");
     return 0;
 }
