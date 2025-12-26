@@ -28,8 +28,8 @@ statements:
 ```
 
 ## TODO
-- [x] Check if the CFG struct is good for the fixpoint computation.
-- [x] Implement the functions for getting the CFG from the AST.
 - [ ] Lexer doesn't tokenize negative numbers (-x).
-- [ ] Implement the abstract domain and all the operations.
-- [ ] Wire the CFG with an abstract state and do the fixpoint computation.
+- [ ] Implement the arithmetic ops in the domain (doing also testing).
+- [ ] Implement `abstract_interval_state_exec_command` (three possible commands).
+- [ ] Create the worklist (a queue) in `abstract_analyzer.c` and compute the fixpoint (without widening/narrowing).
+- [ ] Implement `abstract_interval_state_widening` and `abstract_interval_state_narrowing` and use it in the worklist algorithm.
