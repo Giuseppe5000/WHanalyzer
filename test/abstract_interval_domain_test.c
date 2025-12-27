@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+/* TODO: test over-approximations */
 void interval_create_test(void) {
     /* m,n integers */
     int64_t m = -10;
@@ -34,7 +35,7 @@ void interval_create_test(void) {
     assert(i.type == INTERVAL_STD);
 
     i = interval_create(ctx, -20, 7);
-    assert(i.type == INTERVAL_STD && i.a == INTERVAL_MIN_INF && i.b == INTERVAL_PLUS_INF);
+    assert(i.type == INTERVAL_STD && i.a == INTERVAL_MIN_INF && i.b == 7);
 
     /* Try to create (-INF, -INF) / (INF,INF) */
     i = interval_create(ctx, INTERVAL_MIN_INF, INTERVAL_MIN_INF);
@@ -257,6 +258,8 @@ void interval_union_test(void) {
     i2 = interval_create(ctx, 100, 100);            /* [100, 100] */
     i_union = interval_union(ctx, i1, i2);
     assert(i_union.type == INTERVAL_STD && i_union.a == INTERVAL_MIN_INF && i_union.b == INTERVAL_PLUS_INF);
+
+    abstract_interval_ctx_free(ctx);
 }
 
 void interval_plus_test(void) {
