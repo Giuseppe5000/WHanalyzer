@@ -109,15 +109,20 @@ static Interval interval_create(const Abstract_Interval_Ctx *ctx, int64_t a, int
 
     /* === [a,b] is not in the domain, looking for a correct over-approximation === */
 
-    /* [a,b] < m => (-INF, m] */
-    if (b < ctx->m) {
+    /*
+    [a,b] < m => (-INF, m]
+
+    Checking if m <= n, because if m > n then the constant
+    propagation domain does not have intervals like (-INF, m].
+    */
+    if (b < ctx->m && ctx->m <= ctx->n) {
         i.a = INTERVAL_MIN_INF;
         i.b = ctx->m;
         return i;
     }
 
-    /* [a,b] > n so [n, +INF) */
-    else if (a > ctx->n) {
+    /* [a,b] > n so [n, +INF) (Same check for constant prop. here) */
+    else if (a > ctx->n && ctx->m <= ctx->n) {
         i.a = ctx->n;
         i.b = INTERVAL_PLUS_INF;
         return i;
