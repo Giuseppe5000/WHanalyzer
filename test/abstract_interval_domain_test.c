@@ -223,9 +223,40 @@ void interval_union_test(void) {
     i_union = interval_union(ctx, i1, i2);
     assert(i_union.type == INTERVAL_STD && i_union.a == INTERVAL_MIN_INF && i_union.b == i2.b);
 
-/* TODO: Test
-    { (-INF, k] | k ∈ [m, n] }
-    { [k, +INF) | k ∈ [m, n] } */
+    i1 = interval_create(ctx, -100, -100);  /* [-100, -100] */
+    i2 = interval_create(ctx, -101, -101);  /* [-101, -101] */
+    i_union = interval_union(ctx, i1, i2);
+    assert(i_union.type == INTERVAL_STD && i_union.a == INTERVAL_MIN_INF && i_union.b == m);
+
+    i1 = interval_create(ctx, 100, 100);  /* [100, 100] */
+    i2 = interval_create(ctx, 101, 101);  /* [101, 101] */
+    i_union = interval_union(ctx, i1, i2);
+    assert(i_union.type == INTERVAL_STD && i_union.a == n && i_union.b == INTERVAL_PLUS_INF);
+
+    i1 = interval_create(ctx, -100, -100);  /* [-100, -100] */
+    i2 = interval_create(ctx, 101, 101);    /* [101, 101] */
+    i_union = interval_union(ctx, i1, i2);
+    assert(i_union.type == INTERVAL_STD && i_union.a == INTERVAL_MIN_INF && i_union.b == INTERVAL_PLUS_INF);
+
+    i1 = interval_create(ctx, -1, INTERVAL_PLUS_INF); /* [-1, +INF) */
+    i2 = interval_create(ctx, -100, -100);            /* [-100, -100] */
+    i_union = interval_union(ctx, i1, i2);
+    assert(i_union.type == INTERVAL_STD && i_union.a == INTERVAL_MIN_INF && i_union.b == INTERVAL_PLUS_INF);
+
+    i1 = interval_create(ctx, -1, INTERVAL_PLUS_INF); /* [-1, +INF) */
+    i2 = interval_create(ctx, 100, 100);              /* [100, 100] */
+    i_union = interval_union(ctx, i1, i2);
+    assert(i_union.type == INTERVAL_STD && i_union.a == i1.a && i_union.b == INTERVAL_PLUS_INF);
+
+    i1 = interval_create(ctx, INTERVAL_MIN_INF, 8); /* (-INF, 8] */
+    i2 = interval_create(ctx, -100, -100);          /* [-100, -100] */
+    i_union = interval_union(ctx, i1, i2);
+    assert(i_union.type == INTERVAL_STD && i_union.a == INTERVAL_MIN_INF && i_union.b == i1.b);
+
+    i1 = interval_create(ctx, INTERVAL_MIN_INF, 8); /* (-INF, 8] */
+    i2 = interval_create(ctx, 100, 100);            /* [100, 100] */
+    i_union = interval_union(ctx, i1, i2);
+    assert(i_union.type == INTERVAL_STD && i_union.a == INTERVAL_MIN_INF && i_union.b == INTERVAL_PLUS_INF);
 }
 
 void interval_plus_test(void) {
