@@ -22,7 +22,7 @@ void parser_free_ast_node(AST_Node *node) {
 
 static void parser_print_ast_impl(const AST_Node *node, int indent) {
     if (node->type == NODE_NUM) {
-        printf("%*s%d\n", indent, "", node->as.num);
+        printf("%*s%ld\n", indent, "", node->as.num);
     }
     else if (node->type == NODE_VAR) {
         printf("%*s%.*s\n", indent, "", (int)node->as.var.len, node->as.var.name);

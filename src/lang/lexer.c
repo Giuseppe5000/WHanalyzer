@@ -103,7 +103,7 @@ Token lex_next(Lexer *lex) {
         }
 
         t.type = TOKEN_NUM;
-        t.as.num = atoi(start);
+        t.as.num = atoll(start); /* TODO: Better to use strtoll */
         return t;
     }
 

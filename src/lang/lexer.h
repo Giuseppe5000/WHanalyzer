@@ -41,7 +41,7 @@ typedef struct {
     enum Token_Type type;
     union {
         String str;
-        int32_t num;
+        int64_t num;
     } as;
 } Token;
 

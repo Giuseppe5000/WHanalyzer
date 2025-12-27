@@ -68,7 +68,7 @@ struct AST_Node {
 
         /* Leaf node attributes */
         String var;
-        int32_t num;
+        int64_t num;
         bool boolean;
     } as;
 };
