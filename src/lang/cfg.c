@@ -10,6 +10,8 @@ static CFG_Node build_node(size_t id) {
     CFG_Node node = {
         .id = id,
         .edge_count = 0,
+        .preds = NULL,
+        .preds_count = 0,
     };
 
     return node;
@@ -26,12 +28,12 @@ static size_t count_nodes(AST_Node *node, size_t counter) {
         counter = count_nodes(node->as.child.right, counter);
         break;
     case NODE_IF:
-        counter += 2;
+        counter++;
         counter = count_nodes(node->as.child.left, counter);
         counter = count_nodes(node->as.child.right, counter);
         break;
     case NODE_WHILE:
-        counter += 1;
+        counter++;
         counter = count_nodes(node->as.child.left, counter);
         break;
     default:
@@ -74,6 +76,19 @@ size_t pred_stack_pop(Pred_Stack *s) {
 Links all the elements in the stack of the predecessors to the current node.
 */
 static void wire_predecessors(CFG *cfg, size_t cur_node, Pred_Stack *preds) {
+
+    /*
+    Copy the predecessors in the current node struct.
+
+    This function can be called multiple times wiring the same node, so for collecting
+    all the preds we do a realloc every time (the first time will be a simple malloc).
+    */
+    size_t cur_node_preds_count = cfg->nodes[cur_node].preds_count; /* Prev preds count */
+    cfg->nodes[cur_node].preds_count += preds->count;
+    cfg->nodes[cur_node].preds = xrealloc(cfg->nodes[cur_node].preds, sizeof(size_t)*cfg->nodes[cur_node].preds_count);
+    memcpy(cfg->nodes[cur_node].preds + cur_node_preds_count, preds->data, sizeof(size_t)*preds->count);
+
+    /* Linking the edges */
     while (preds->count != 0) {
         size_t pred = pred_stack_pop(preds);
         size_t prev_node_edge_count = cfg->nodes[pred].edge_count;
@@ -278,6 +293,11 @@ void cfg_free(CFG *cfg) {
             else if (edge.type == EDGE_GUARD) {
                 parser_free_ast_node(edge.as.guard.condition);
             }
+        }
+
+        /* Predecessors array free */
+        if (node.preds != NULL) {
+            free(node.preds);
         }
     }
 

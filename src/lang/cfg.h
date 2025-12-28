@@ -13,8 +13,8 @@ typedef struct CFG_Node CFG_Node;
 typedef struct CFG_Edge CFG_Edge;
 
 struct CFG_Edge {
-    size_t src;
-    size_t dst;
+    size_t src; /* Node src id */
+    size_t dst; /* Node dst id */
     enum Edge_Type type;
     union {
         AST_Node *assign;
@@ -37,6 +37,10 @@ struct CFG_Node{
     */
     CFG_Edge edges[2];
     size_t edge_count;
+
+    /* Array of nodes that have an edge coming here */
+    size_t *preds;
+    size_t preds_count;
 };
 
 typedef struct {
