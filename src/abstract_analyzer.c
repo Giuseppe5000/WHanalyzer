@@ -163,6 +163,10 @@ void while_analyzer_exec(While_Analyzer *wa) {
     Abstract_State *s2 = wa->func.exec_command(wa->ctx, wa->state[0], wa->cfg->nodes[2].edges[0].as.assign);
     wa->func.state_free(wa->state[0]);
     wa->state[0] = s2;
+
+    Abstract_State *s3 = wa->func.exec_command(wa->ctx, wa->state[0], wa->cfg->nodes[3].edges[0].as.assign);
+    wa->func.state_free(wa->state[0]);
+    wa->state[0] = s3;
 }
 
 void while_analyzer_free(While_Analyzer *wa) {

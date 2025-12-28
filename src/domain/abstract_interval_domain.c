@@ -165,11 +165,14 @@ static Interval interval_union(const Abstract_Interval_Ctx *ctx, Interval i1, In
 
 /* Addition checking overflow and INF */
 static int64_t safe_plus(int64_t a, int64_t b) {
+
+    /* Here there aren't cases like a = +INF and b = -INF because it can't happen by contruction */
     if (a == INTERVAL_PLUS_INF || b == INTERVAL_PLUS_INF) return INTERVAL_PLUS_INF;
     if (a == INTERVAL_MIN_INF || b == INTERVAL_MIN_INF) return INTERVAL_MIN_INF;
 
     // Check overflow: a + b > +INF
     if (b > 0 && a > INTERVAL_PLUS_INF - b) return INTERVAL_PLUS_INF;
+
     // Check underflow: a + b < -INF
     if (b < 0 && a < INTERVAL_MIN_INF - b) return INTERVAL_MIN_INF;
 
@@ -178,18 +181,68 @@ static int64_t safe_plus(int64_t a, int64_t b) {
 
 /* Subtraction checking overflow and INF */
 static int64_t safe_minus(int64_t a, int64_t b) {
+
+    /* Here there aren't cases like a = +INF and b = +INF because it can't happen by contruction */
     if (a == INTERVAL_PLUS_INF || b == INTERVAL_MIN_INF) return INTERVAL_PLUS_INF;
     if (a == INTERVAL_MIN_INF || b == INTERVAL_PLUS_INF) return INTERVAL_MIN_INF;
 
     // Check overflow: a - b > +INF
     if (b < 0 && a > INTERVAL_PLUS_INF + b) return INTERVAL_PLUS_INF;
+
     // Check underflow: a - b < -INF
     if (b > 0 && a < INTERVAL_MIN_INF + b) return INTERVAL_MIN_INF;
 
     return a - b;
 }
 
+/* Multiplication checking overflow and INF */
+static int64_t safe_mult(int64_t a, int64_t b) {
+
+    /* Zero handling */
+    if (a == 0 || b == 0) return 0;
+
+    /* INF handling, all possible cases because a and b can be anything */
+    if (a == INTERVAL_MIN_INF && b > 0) return INTERVAL_MIN_INF;
+    if (a == INTERVAL_MIN_INF && b < 0) return INTERVAL_PLUS_INF;
+    if (a == INTERVAL_PLUS_INF && b > 0) return INTERVAL_PLUS_INF;
+    if (a == INTERVAL_PLUS_INF && b < 0) return INTERVAL_MIN_INF;
+
+    if (b == INTERVAL_MIN_INF && a > 0) return INTERVAL_MIN_INF;
+    if (b == INTERVAL_MIN_INF && a < 0) return INTERVAL_PLUS_INF;
+    if (b == INTERVAL_PLUS_INF && a > 0) return INTERVAL_PLUS_INF;
+    if (b == INTERVAL_PLUS_INF && a < 0) return INTERVAL_MIN_INF;
+
+    // Check overflow: a * b > +INF <=> a < +INF / b -- (a and b positive)
+    if (a > 0 && b > 0 && a > INTERVAL_PLUS_INF / b) return INTERVAL_PLUS_INF;
+
+    // Check overflow: a * b < -INF <=> b < -INF / a -- (a positive, b negative)
+    if (a > 0 && b < 0 && b < INTERVAL_MIN_INF / a) return INTERVAL_MIN_INF;
+
+    // Check overflow: a * b < -INF <=> a < -INF / b -- (a negative, b positive)
+    if (a < 0 && b > 0 && a < INTERVAL_MIN_INF / b) return INTERVAL_MIN_INF;
+
+    // Check overflow: a * b > +INF <=> -a > -(+INF / b) <=> a < +INF / b -- (a negative, b negative)
+    if (a < 0 && b < 0 && a < INTERVAL_PLUS_INF / b) return INTERVAL_PLUS_INF;
+
+    return a * b;
+}
+
+static int64_t min4(int64_t a, int64_t b, int64_t c, int64_t d) {
+    int64_t min = a < b ? a : b;
+    min = min < c ? min : c;
+    min = min < d ? min : d;
+    return min;
+}
+
+static int64_t max4(int64_t a, int64_t b, int64_t c, int64_t d) {
+    int64_t max = a > b ? a : b;
+    max = max > c ? max : c;
+    max = max > d ? max : d;
+    return max;
+}
+
 static Interval interval_plus(const Abstract_Interval_Ctx *ctx, Interval i1, Interval i2) {
+
     /* Bottom handling */
     if (i1.type == INTERVAL_BOTTOM) return i1;
     if (i2.type == INTERVAL_BOTTOM) return i2;
@@ -202,6 +255,7 @@ static Interval interval_plus(const Abstract_Interval_Ctx *ctx, Interval i1, Int
 }
 
 static Interval interval_minus(const Abstract_Interval_Ctx *ctx, Interval i1, Interval i2) {
+
     /* Bottom handling */
     if (i1.type == INTERVAL_BOTTOM) return i1;
     if (i2.type == INTERVAL_BOTTOM) return i2;
@@ -213,7 +267,32 @@ static Interval interval_minus(const Abstract_Interval_Ctx *ctx, Interval i1, In
     return interval_create(ctx, a, b);
 }
 
-// static Interval interval_mult(const Abstract_Int_State *s, Interval a, Interval b);
+static Interval interval_mult(const Abstract_Interval_Ctx *ctx, Interval i1, Interval i2) {
+
+    /* Bottom handling */
+    if (i1.type == INTERVAL_BOTTOM) return i1;
+    if (i2.type == INTERVAL_BOTTOM) return i2;
+
+    /*
+    Rule: [i1.a,i1.b] * [i2.a,i2.b] = [x,y]
+    where: x = min(i1.a*i2.a, i1.a*i2.b, i1.b*i2.a, i1.b*i2.b)
+           y = max(i1.a*i2.a, i1.a*i2.b, i1.b*i2.a, i1.b*i2.b)
+
+    Setting i1.a = a, i1.b = b, i2.a = c, i2.b = d:
+           x = min(ac, ad, bc, bd)
+           y = max(ac, ad, bc, bd)
+    */
+    int64_t ac = safe_mult(i1.a, i2.a);
+    int64_t ad = safe_mult(i1.a, i2.b);
+    int64_t bc = safe_mult(i1.b, i2.a);
+    int64_t bd = safe_mult(i1.b, i2.b);
+
+    int64_t a = min4(ac, ad, bc, bd);
+    int64_t b = max4(ac, ad, bc, bd);
+
+    return interval_create(ctx, a, b);
+}
+
 // static Interval interval_div(const Abstract_Int_State *s, Interval a, Interval b);
 
 /* Widening and Narrowing operators */
@@ -305,7 +384,6 @@ static Interval exec_aexpr(const Abstract_Interval_Ctx *ctx, const Interval *s, 
             int64_t num = node->as.num;
             return interval_create(ctx, num, num);
         }
-
     case NODE_VAR:
         {
             /* Get the assigned variable */
@@ -320,7 +398,6 @@ static Interval exec_aexpr(const Abstract_Interval_Ctx *ctx, const Interval *s, 
             }
             return s[var_index];
         }
-
     case NODE_PLUS:
         {
             Interval i1 = exec_aexpr(ctx, s, node->as.child.left);
@@ -334,6 +411,11 @@ static Interval exec_aexpr(const Abstract_Interval_Ctx *ctx, const Interval *s, 
             return interval_minus(ctx, i1, i2);
         }
     case NODE_MULT:
+        {
+            Interval i1 = exec_aexpr(ctx, s, node->as.child.left);
+            Interval i2 = exec_aexpr(ctx, s, node->as.child.right);
+            return interval_mult(ctx, i1, i2);
+        }
     case NODE_DIV:
         assert(0 && "TODO");
     default:
