@@ -163,92 +163,52 @@ static Interval interval_union(const Abstract_Interval_Ctx *ctx, Interval i1, In
 /* Returns the intersection of intervals 'a' and 'b' */
 // static Interval interval_intersect(const Abstract_Int_State *s, Interval a, Interval b);
 
-/* Arithmetic operations on intervals */
+/* Addition checking overflow and INF */
+static int64_t safe_plus(int64_t a, int64_t b) {
+    if (a == INTERVAL_PLUS_INF || b == INTERVAL_PLUS_INF) return INTERVAL_PLUS_INF;
+    if (a == INTERVAL_MIN_INF || b == INTERVAL_MIN_INF) return INTERVAL_MIN_INF;
 
-/* Returns true if a+b will produce an integer overflow */
-static bool integer_plus_overflow_check(int64_t a, int64_t b) {
-    if (b > 0) {
-        /* If a + b > INT64_MAX there is an overflow */
-        return a > (INT64_MAX - b);
-    } else if (b < 0) {
-        /* If a + b < INT64_MIN there is an overflow */
-        return a < (INT64_MIN - b);
-    }
-    return false;
+    // Check overflow: a + b > +INF
+    if (b > 0 && a > INTERVAL_PLUS_INF - b) return INTERVAL_PLUS_INF;
+    // Check underflow: a + b < -INF
+    if (b < 0 && a < INTERVAL_MIN_INF - b) return INTERVAL_MIN_INF;
+
+    return a + b;
+}
+
+/* Subtraction checking overflow and INF */
+static int64_t safe_minus(int64_t a, int64_t b) {
+    if (a == INTERVAL_PLUS_INF || b == INTERVAL_MIN_INF) return INTERVAL_PLUS_INF;
+    if (a == INTERVAL_MIN_INF || b == INTERVAL_PLUS_INF) return INTERVAL_MIN_INF;
+
+    // Check overflow: a - b > +INF
+    if (b < 0 && a > INTERVAL_PLUS_INF + b) return INTERVAL_PLUS_INF;
+    // Check underflow: a - b < -INF
+    if (b > 0 && a < INTERVAL_MIN_INF + b) return INTERVAL_MIN_INF;
+
+    return a - b;
 }
 
 static Interval interval_plus(const Abstract_Interval_Ctx *ctx, Interval i1, Interval i2) {
-
     /* Bottom handling */
     if (i1.type == INTERVAL_BOTTOM) return i1;
     if (i2.type == INTERVAL_BOTTOM) return i2;
 
-    int64_t a;
-    int64_t b;
-
     /* Rule: [i1.a,i1.b] - [i2.a,i2.b] = [i1.a + i2.a, i1.b + i2.b] */
-
-    /* Compute a (checking for overflows) */
-    if (i1.a == INTERVAL_MIN_INF || i2.a == INTERVAL_MIN_INF) {
-        a = INTERVAL_MIN_INF;
-    }
-    else {
-        if (integer_plus_overflow_check(i1.a, i2.a)) {
-            assert(0 && "Overflow detected in interval_plus function!"); /* TODO: What to do with an overflow? */
-        } else {
-            a = i1.a + i2.a;
-        }
-    }
-
-    /* Compute b (checking for overflows) */
-    if (i1.b == INTERVAL_PLUS_INF || i2.b == INTERVAL_PLUS_INF) {
-        b = INTERVAL_PLUS_INF;
-    }
-    else {
-        if (integer_plus_overflow_check(i1.b, i2.b)) {
-            assert(0 && "Overflow detected in interval_plus function!"); /* TODO: What to do with an overflow? */
-        } else {
-            b = i1.b + i2.b;
-        }
-    }
+    int64_t a = safe_plus(i1.a, i2.a);
+    int64_t b = safe_plus(i1.b, i2.b);
 
     return interval_create(ctx, a, b);
 }
 
 static Interval interval_minus(const Abstract_Interval_Ctx *ctx, Interval i1, Interval i2) {
-
     /* Bottom handling */
     if (i1.type == INTERVAL_BOTTOM) return i1;
     if (i2.type == INTERVAL_BOTTOM) return i2;
 
-    int64_t a;
-    int64_t b;
-
     /* Rule: [i1.a,i1.b] - [i2.a,i2.b] = [i1.a - i2.b, i1.b - i2.a] */
-
-    /* Compute a (checking for overflows) */
-    if (i1.a == INTERVAL_MIN_INF || i2.b == INTERVAL_PLUS_INF) {
-        a = INTERVAL_MIN_INF;
-    }
-    else {
-        if (integer_plus_overflow_check(i1.a, -i2.b)) {
-            assert(0 && "Overflow detected in interval_plus function!"); /* TODO: What to do with an overflow? */
-        } else {
-            a = i1.a - i2.b;
-        }
-    }
-
-    /* Compute b (checking for overflows) */
-    if (i1.b == INTERVAL_PLUS_INF || i2.a == INTERVAL_MIN_INF) {
-        b = INTERVAL_PLUS_INF;
-    }
-    else {
-        if (integer_plus_overflow_check(i1.b, -i2.a)) {
-            assert(0 && "Overflow detected in interval_plus function!"); /* TODO: What to do with an overflow? */
-        } else {
-            b = i1.b - i2.a;
-        }
-    }
+    int64_t a = safe_minus(i1.a, i2.b);
+    int64_t b = safe_minus(i1.b, i2.a);
 
     return interval_create(ctx, a, b);
 }
