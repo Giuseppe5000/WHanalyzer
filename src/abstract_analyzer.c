@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef void Abstract_State;
 typedef void Abstract_Dom_Ctx;
@@ -27,8 +28,7 @@ struct While_Analyzer {
     Abstract_Dom_Ctx *ctx;
 
     /* All variables present in the input program */
-    String *vars;
-    size_t var_count;
+    Variables vars;
 
     /* Source code of the input program */
     char *src;
@@ -47,6 +47,51 @@ struct While_Analyzer {
         Abstract_State *(*narrowing) (const Abstract_Dom_Ctx *ctx, const Abstract_State *s1, const Abstract_State *s2);
     } func;
 };
+
+/* ================================ Vars dynamic array  =============================== */
+
+static void vars_push(Variables *vars, String s) {
+
+    /* Check if s is already present in the array */
+    for (size_t i = 0; i < vars->count; ++i) {
+        if (strncmp(vars->var[i].name, s.name, s.len) == 0) {
+            return;
+        }
+    }
+
+    if (vars->count >= vars->capacity) {
+        if (vars->capacity == 0) {
+            vars->capacity = 32; /* Inits with 32 elements */
+        } else {
+            vars->capacity *= 2;
+        }
+        vars->var = xrealloc(vars->var, vars->capacity*sizeof(String));
+    }
+    vars->var[vars->count++] = s;
+}
+
+static void set_vars(While_Analyzer *wa) {
+    memset(&(wa->vars), 0, sizeof(Variables));
+
+    for (size_t i = 0; i < wa->cfg->count; ++i) {
+        CFG_Node node = wa->cfg->nodes[i];
+        for (size_t j = 0; j < node.edge_count; ++j) {
+            CFG_Edge edge = node.edges[j];
+
+            if (edge.type == EDGE_ASSIGN) {
+                const char *str = edge.as.assign->as.child.left->as.var.name;
+                size_t len = edge.as.assign->as.child.left->as.var.len;
+                String s = {
+                    .name = str,
+                    .len = len,
+                };
+                vars_push(&(wa->vars), s);
+            }
+        }
+    }
+}
+
+/* ==================================================================================== */
 
 /* Default init for all types of domain */
 static While_Analyzer *while_analyzer_init(const char *src_path) {
@@ -84,44 +129,8 @@ static While_Analyzer *while_analyzer_init(const char *src_path) {
     wa->cfg = cfg_get(ast);
     parser_free_ast_node(ast);
 
-
-/* TODO:
-    this method count multiple times the same variables!
-    wa->vars at this time should be a dynamic array of String,
-    and check for each new encountered variable if it is a new variable
-    or it isn't.
-*/
-    /* Get var count in the input program */
-    wa->var_count = 0;
-    for (size_t i = 0; i < wa->cfg->count; ++i) {
-        CFG_Node node = wa->cfg->nodes[i];
-        for (size_t j = 0; j < node.edge_count; ++j) {
-            CFG_Edge edge = node.edges[j];
-
-            if (edge.type == EDGE_ASSIGN) {
-                wa->var_count++;
-            }
-        }
-    }
-
-    /* Alloc and link variable names/len to wa->vars */
-    wa->vars = xmalloc(sizeof(String) * wa->var_count);
-
-    size_t loop_count = 0;
-    for (size_t i = 0; i < wa->cfg->count; ++i) {
-        CFG_Node node = wa->cfg->nodes[i];
-        for (size_t j = 0; j < node.edge_count; ++j) {
-            CFG_Edge edge = node.edges[j];
-
-            if (edge.type == EDGE_ASSIGN) {
-                const char *str = edge.as.assign->as.child.left->as.var.name;
-                size_t len = edge.as.assign->as.child.left->as.var.len;
-                wa->vars[loop_count].name = str;
-                wa->vars[loop_count].len = len;
-                loop_count++;
-            }
-        }
-    }
+    /* Set the vars present in the input program in wa->vars */
+    set_vars(wa);
 
     return wa;
 }
@@ -135,8 +144,8 @@ void while_analyzer_exec(While_Analyzer *wa) {
     }
 
     /* Print vars */
-    for (size_t i = 0; i < wa->var_count; ++i) {
-        printf("(var) %.*s\n", (int) wa->vars[i].len, wa->vars[i].name);
+    for (size_t i = 0; i < wa->vars.count; ++i) {
+        printf("(var) %.*s\n", (int) wa->vars.var[i].len, wa->vars.var[i].name);
     }
 
     /* CFG graphviz */
@@ -148,6 +157,7 @@ void while_analyzer_exec(While_Analyzer *wa) {
     wa->state[0] = s;
 
     Abstract_State *s1 = wa->func.exec_command(wa->ctx, wa->state[0], wa->cfg->nodes[1].edges[0].as.assign);
+    wa->func.state_free(s1);
 }
 
 void while_analyzer_free(While_Analyzer *wa) {
@@ -160,7 +170,7 @@ void while_analyzer_free(While_Analyzer *wa) {
     wa->func.ctx_free(wa->ctx);
     free(wa->src);
     cfg_free(wa->cfg);
-    free(wa->vars);
+    free(wa->vars.var);
     free(wa);
 }
 
@@ -168,11 +178,11 @@ void while_analyzer_free(While_Analyzer *wa) {
 
 
 /* ================================ Function wrappers ================================= */
-void abstract_interval_state_free_wrap(Abstract_State *s) {
+void abstract_interval_state_free_wrapper(Abstract_State *s) {
     abstract_interval_state_free((Interval *) s);
 }
 
-void abstract_interval_ctx_free_wrap(Abstract_Dom_Ctx *ctx) {
+void abstract_interval_ctx_free_wrapper(Abstract_Dom_Ctx *ctx) {
     abstract_interval_ctx_free((Abstract_Interval_Ctx *)ctx);
 }
 
@@ -209,7 +219,7 @@ While_Analyzer *while_analyzer_init_parametric_interval(const char *src_path, in
     While_Analyzer *wa = while_analyzer_init(src_path);
 
     /* Domain context setup */
-    wa->ctx = abstract_interval_ctx_init(m, n, wa->vars, wa->var_count);
+    wa->ctx = abstract_interval_ctx_init(m, n, &(wa->vars));
 
     /* Alloc abstract states for all program points */
     wa->state = malloc(sizeof(Abstract_State *) * wa->cfg->count);
@@ -219,8 +229,8 @@ While_Analyzer *while_analyzer_init_parametric_interval(const char *src_path, in
     }
 
     /* Link all domain functions */
-    wa->func.ctx_free = abstract_interval_ctx_free_wrap;
-    wa->func.state_free = abstract_interval_state_free_wrap;
+    wa->func.ctx_free = abstract_interval_ctx_free_wrapper;
+    wa->func.state_free = abstract_interval_state_free_wrapper;
     wa->func.state_set_bottom = abstract_interval_state_set_bottom_wrapper;
     wa->func.state_set_top = abstract_interval_state_set_top_wrapper;
     wa->func.exec_command = abstract_interval_state_exec_command_wrapper;

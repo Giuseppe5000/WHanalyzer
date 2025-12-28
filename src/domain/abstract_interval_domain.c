@@ -27,8 +27,7 @@ struct Interval {
 struct Abstract_Interval_Ctx {
     int64_t m;
     int64_t n;
-    const String *vars;
-    size_t var_count;
+    const Variables *vars;
 };
 
 /* ================================== Interval ops ==================================== */
@@ -224,14 +223,13 @@ static Interval interval_plus(const Abstract_Interval_Ctx *ctx, Interval i1, Int
 
 /* ==================================================================================== */
 
-Abstract_Interval_Ctx *abstract_interval_ctx_init(int64_t m, int64_t n, const String *vars, size_t var_count) {
+Abstract_Interval_Ctx *abstract_interval_ctx_init(int64_t m, int64_t n, const Variables *vars) {
     Abstract_Interval_Ctx *ctx = xmalloc(sizeof(Abstract_Interval_Ctx));
 
     /* Setting the props */
     ctx->m = m;
     ctx->n = n;
     ctx->vars = vars;
-    ctx->var_count = var_count;
 
     return ctx;
 }
@@ -241,7 +239,7 @@ void abstract_interval_ctx_free(Abstract_Interval_Ctx *ctx) {
 }
 
 Interval *abstract_interval_state_init(const Abstract_Interval_Ctx *ctx) {
-    Interval *s = xmalloc(sizeof(Interval) * ctx->var_count);
+    Interval *s = xmalloc(sizeof(Interval) * ctx->vars->count);
 
     /* By default set to bottom*/
     abstract_interval_state_set_bottom(ctx, s);
@@ -255,12 +253,12 @@ void abstract_interval_state_free(Interval *s) {
 
 void abstract_interval_state_set_bottom(const Abstract_Interval_Ctx *ctx, Interval *s) {
     /* Since BOTTOM enum value = 0, all the intervals will be bottom */
-    memset(s, 0, sizeof(Interval) * ctx->var_count);
+    memset(s, 0, sizeof(Interval) * ctx->vars->count);
 }
 
 void abstract_interval_state_set_top(const Abstract_Interval_Ctx *ctx, Interval *s) {
     /* Set every interval to TOP */
-    for (size_t i = 0; i < ctx->var_count; ++i) {
+    for (size_t i = 0; i < ctx->vars->count; ++i) {
         s[i].type = INTERVAL_STD;
         s[i].a = INTERVAL_MIN_INF;
         s[i].b = INTERVAL_PLUS_INF;
@@ -271,7 +269,7 @@ bool abstract_interval_state_leq(const Abstract_Interval_Ctx *ctx, const Interva
     bool result = true;
 
     /* s1 <= s2 if all elements of s1 are <= all elements of s2 */
-    for (size_t i = 0; i < ctx->var_count; ++i) {
+    for (size_t i = 0; i < ctx->vars->count; ++i) {
         result = result && interval_leq(s1[i], s2[i]);
     }
 
@@ -281,7 +279,7 @@ bool abstract_interval_state_leq(const Abstract_Interval_Ctx *ctx, const Interva
 Interval *abstract_interval_state_union(const Abstract_Interval_Ctx *ctx, const Interval *s1, const Interval *s2) {
     Interval *res = abstract_interval_state_init(ctx);
 
-    for (size_t i = 0; i < ctx->var_count; ++i) {
+    for (size_t i = 0; i < ctx->vars->count; ++i) {
         res[i] = interval_union(ctx, s1[i], s2[i]);
     }
 
@@ -295,7 +293,7 @@ Interval *abstract_interval_state_narrowing(const Abstract_Interval_Ctx *ctx, co
 /* Returns a new heap allocated state with the same elements of 's' */
 static Interval *clone_state(const Abstract_Interval_Ctx *ctx, const Interval *s) {
     Interval *res = abstract_interval_state_init(ctx);
-    memcpy(res, s, sizeof(Interval) * ctx->var_count);
+    memcpy(res, s, sizeof(Interval) * ctx->vars->count);
     return res;
 }
 
@@ -314,8 +312,8 @@ static Interval exec_aexpr(const Abstract_Interval_Ctx *ctx, const Interval *s, 
 
             /* Get the interval for that variable */
             size_t var_index = 0;
-            for (size_t i = 0; i < ctx->var_count; ++i) {
-                if (strncmp(var.name, ctx->vars[i].name, var.len) == 0) {
+            for (size_t i = 0; i < ctx->vars->count; ++i) {
+                if (strncmp(var.name, ctx->vars->var[i].name, var.len) == 0) {
                     var_index = i;
                 }
             }
@@ -340,8 +338,8 @@ static Interval *abstract_interval_state_exec_assign(const Abstract_Interval_Ctx
 
     /* Get the interval for that variable */
     size_t var_index = 0;
-    for (size_t i = 0; i < ctx->var_count; ++i) {
-        if (strncmp(var.name, ctx->vars[i].name, var.len) == 0) {
+    for (size_t i = 0; i < ctx->vars->count; ++i) {
+        if (strncmp(var.name, ctx->vars->var[i].name, var.len) == 0) {
             var_index = i;
         }
     }

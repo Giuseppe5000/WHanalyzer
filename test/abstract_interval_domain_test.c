@@ -7,7 +7,7 @@ void interval_create_test(void) {
     /* m,n integers */
     int64_t m = -10;
     int64_t n = 10;
-    Abstract_Interval_Ctx *ctx = abstract_interval_ctx_init(m, n, NULL, 0);
+    Abstract_Interval_Ctx *ctx = abstract_interval_ctx_init(m, n, NULL);
     Interval i = {0};
 
     i = interval_create(ctx, 3, 2);
@@ -49,7 +49,7 @@ void interval_create_test(void) {
     /* m,n infinite */
     m = INTERVAL_MIN_INF;
     n = INTERVAL_PLUS_INF;
-    ctx = abstract_interval_ctx_init(m, n, NULL, 0);
+    ctx = abstract_interval_ctx_init(m, n, NULL);
 
     i = interval_create(ctx, 3, 2);
     assert(i.type == INTERVAL_BOTTOM);
@@ -129,7 +129,7 @@ void interval_union_test(void) {
     /* m,n integers */
     int64_t m = -10;
     int64_t n = 10;
-    Abstract_Interval_Ctx *ctx = abstract_interval_ctx_init(m, n, NULL, 0);
+    Abstract_Interval_Ctx *ctx = abstract_interval_ctx_init(m, n, NULL);
     Interval i1 = {0};
     Interval i2 = {0};
     Interval i_union = {0};
@@ -266,7 +266,7 @@ void interval_plus_test(void) {
     /* m,n integers */
     int64_t m = -10;
     int64_t n = 10;
-    Abstract_Interval_Ctx *ctx = abstract_interval_ctx_init(m, n, NULL, 0);
+    Abstract_Interval_Ctx *ctx = abstract_interval_ctx_init(m, n, NULL);
     Interval i1 = {0};
     Interval i2 = {0};
     Interval i_plus = {0};

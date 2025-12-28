@@ -8,6 +8,12 @@ typedef struct {
     size_t len;
 } String;
 
+typedef struct {
+    String *var;
+    size_t count;
+    size_t capacity;
+} Variables;
+
 /* Same as originals but exits on OOM */
 void *xmalloc(size_t size);
 void *xrealloc(void *ptr, size_t size);
