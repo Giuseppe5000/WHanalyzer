@@ -161,7 +161,17 @@ static Interval interval_union(const Abstract_Interval_Ctx *ctx, Interval i1, In
 }
 
 /* Returns the intersection of intervals 'a' and 'b' */
-// static Interval interval_intersect(const Abstract_Int_State *s, Interval a, Interval b);
+static Interval interval_intersect(const Abstract_Interval_Ctx *ctx, Interval i1, Interval i2) {
+
+    /* Bottom handling */
+    if (i1.type == INTERVAL_BOTTOM) return i1;
+    if (i2.type == INTERVAL_BOTTOM) return i2;
+
+    int64_t max_a = i1.a >= i2.a ? i1.a : i2.a;
+    int64_t min_b = i1.b >= i2.b ? i2.b : i1.b;
+
+    return interval_create(ctx, max_a, min_b);
+}
 
 /* Addition checking overflow and INF */
 static int64_t safe_plus(int64_t a, int64_t b) {
@@ -170,10 +180,10 @@ static int64_t safe_plus(int64_t a, int64_t b) {
     if (a == INTERVAL_PLUS_INF || b == INTERVAL_PLUS_INF) return INTERVAL_PLUS_INF;
     if (a == INTERVAL_MIN_INF || b == INTERVAL_MIN_INF) return INTERVAL_MIN_INF;
 
-    // Check overflow: a + b > +INF
+    /* Check overflow: a + b > +INF */
     if (b > 0 && a > INTERVAL_PLUS_INF - b) return INTERVAL_PLUS_INF;
 
-    // Check underflow: a + b < -INF
+    /* Check underflow: a + b < -INF */
     if (b < 0 && a < INTERVAL_MIN_INF - b) return INTERVAL_MIN_INF;
 
     return a + b;
@@ -186,10 +196,10 @@ static int64_t safe_minus(int64_t a, int64_t b) {
     if (a == INTERVAL_PLUS_INF || b == INTERVAL_MIN_INF) return INTERVAL_PLUS_INF;
     if (a == INTERVAL_MIN_INF || b == INTERVAL_PLUS_INF) return INTERVAL_MIN_INF;
 
-    // Check overflow: a - b > +INF
+    /* Check overflow: a - b > +INF */
     if (b < 0 && a > INTERVAL_PLUS_INF + b) return INTERVAL_PLUS_INF;
 
-    // Check underflow: a - b < -INF
+    /* Check underflow: a - b < -INF */
     if (b > 0 && a < INTERVAL_MIN_INF + b) return INTERVAL_MIN_INF;
 
     return a - b;
@@ -212,19 +222,41 @@ static int64_t safe_mult(int64_t a, int64_t b) {
     if (b == INTERVAL_PLUS_INF && a > 0) return INTERVAL_PLUS_INF;
     if (b == INTERVAL_PLUS_INF && a < 0) return INTERVAL_MIN_INF;
 
-    // Check overflow: a * b > +INF <=> a < +INF / b -- (a and b positive)
+    /* Check overflow: a * b > +INF <=> a < +INF / b -- (a and b positive) */
     if (a > 0 && b > 0 && a > INTERVAL_PLUS_INF / b) return INTERVAL_PLUS_INF;
 
-    // Check overflow: a * b < -INF <=> b < -INF / a -- (a positive, b negative)
+    /* Check overflow: a * b < -INF <=> b < -INF / a -- (a positive, b negative) */
     if (a > 0 && b < 0 && b < INTERVAL_MIN_INF / a) return INTERVAL_MIN_INF;
 
-    // Check overflow: a * b < -INF <=> a < -INF / b -- (a negative, b positive)
+    /* Check overflow: a * b < -INF <=> a < -INF / b -- (a negative, b positive) */
     if (a < 0 && b > 0 && a < INTERVAL_MIN_INF / b) return INTERVAL_MIN_INF;
 
-    // Check overflow: a * b > +INF <=> -a > -(+INF / b) <=> a < +INF / b -- (a negative, b negative)
+    /* Check overflow: a * b > +INF <=> -a > -(+INF / b) <=> a < +INF / b -- (a negative, b negative) */
     if (a < 0 && b < 0 && a < INTERVAL_PLUS_INF / b) return INTERVAL_PLUS_INF;
 
     return a * b;
+}
+
+/* Division checking overflow and INF, b != 0 */
+static int64_t safe_div(int64_t a, int64_t b) {
+
+    /* INF handling, all possible cases because a and b can be anything */
+    if (a == INTERVAL_MIN_INF && b > 0) return INTERVAL_MIN_INF;
+    if (a == INTERVAL_MIN_INF && b < 0) return INTERVAL_PLUS_INF;
+    if (a == INTERVAL_PLUS_INF && b > 0) return INTERVAL_PLUS_INF;
+    if (a == INTERVAL_PLUS_INF && b < 0) return INTERVAL_MIN_INF;
+
+    if (b == INTERVAL_MIN_INF && a > 0) return INTERVAL_MIN_INF;
+    if (b == INTERVAL_MIN_INF && a < 0) return INTERVAL_PLUS_INF;
+    if (b == INTERVAL_PLUS_INF && a > 0) return INTERVAL_PLUS_INF;
+    if (b == INTERVAL_PLUS_INF && a < 0) return INTERVAL_MIN_INF;
+
+    /*
+    With integer division overflow can happen with INTERVAL_MIN_INF / -1.
+    This case is handled in the above if stmt.
+    */
+
+    return a / b;
 }
 
 static int64_t min4(int64_t a, int64_t b, int64_t c, int64_t d) {
@@ -247,7 +279,7 @@ static Interval interval_plus(const Abstract_Interval_Ctx *ctx, Interval i1, Int
     if (i1.type == INTERVAL_BOTTOM) return i1;
     if (i2.type == INTERVAL_BOTTOM) return i2;
 
-    /* Rule: [i1.a,i1.b] - [i2.a,i2.b] = [i1.a + i2.a, i1.b + i2.b] */
+    /* Rule: [i1.a,i1.b] +# [i2.a,i2.b] = [i1.a + i2.a, i1.b + i2.b] */
     int64_t a = safe_plus(i1.a, i2.a);
     int64_t b = safe_plus(i1.b, i2.b);
 
@@ -260,7 +292,7 @@ static Interval interval_minus(const Abstract_Interval_Ctx *ctx, Interval i1, In
     if (i1.type == INTERVAL_BOTTOM) return i1;
     if (i2.type == INTERVAL_BOTTOM) return i2;
 
-    /* Rule: [i1.a,i1.b] - [i2.a,i2.b] = [i1.a - i2.b, i1.b - i2.a] */
+    /* Rule: [i1.a,i1.b] -# [i2.a,i2.b] = [i1.a - i2.b, i1.b - i2.a] */
     int64_t a = safe_minus(i1.a, i2.b);
     int64_t b = safe_minus(i1.b, i2.a);
 
@@ -274,7 +306,7 @@ static Interval interval_mult(const Abstract_Interval_Ctx *ctx, Interval i1, Int
     if (i2.type == INTERVAL_BOTTOM) return i2;
 
     /*
-    Rule: [i1.a,i1.b] * [i2.a,i2.b] = [x,y]
+    Rule: [i1.a,i1.b] *# [i2.a,i2.b] = [x,y]
     where: x = min(i1.a*i2.a, i1.a*i2.b, i1.b*i2.a, i1.b*i2.b)
            y = max(i1.a*i2.a, i1.a*i2.b, i1.b*i2.a, i1.b*i2.b)
 
@@ -293,7 +325,94 @@ static Interval interval_mult(const Abstract_Interval_Ctx *ctx, Interval i1, Int
     return interval_create(ctx, a, b);
 }
 
-// static Interval interval_div(const Abstract_Int_State *s, Interval a, Interval b);
+/* Check soudness */
+static Interval interval_div(const Abstract_Interval_Ctx *ctx, Interval i1, Interval i2) {
+
+    /* Bottom handling */
+    if (i1.type == INTERVAL_BOTTOM) return i1;
+    if (i2.type == INTERVAL_BOTTOM) return i2;
+
+    /*
+    Setting i1.a = a, i1.b = b, i2.a = c, i2.b = d.
+
+    Rule: [a,b] /# [c,d] =
+          [min(a/c,a/d), max(b/c,b/d)] -- if c >= 1
+          [min(b/c,b/d), max(a/c,a/d)] -- if d <= -1
+          ([a,b] /# ([c,d] Intersect [1,+INF))) Union ([a,b] /# ([c,d] Intersect (-INF,1])) -- otherwise
+    */
+    int64_t a;
+    int64_t b;
+
+    if (i2.a >= 1) {
+        int64_t ac = safe_div(i1.a, i2.a);
+        int64_t ad = safe_div(i1.a, i2.b);
+        int64_t bc = safe_div(i1.b, i2.a);
+        int64_t bd = safe_div(i1.b, i2.b);
+
+        a = ac >= ad ? ad : ac;
+        b = bc >= bd ? bc : bd;
+        return interval_create(ctx, a, b);
+    }
+    else if (i2.b <= -1) {
+        int64_t ac = safe_div(i1.a, i2.a);
+        int64_t ad = safe_div(i1.a, i2.b);
+        int64_t bc = safe_div(i1.b, i2.a);
+        int64_t bd = safe_div(i1.b, i2.b);
+
+        a = bc >= bd ? bd : bc;
+        b = ac >= ad ? ac : ad;
+        return interval_create(ctx, a, b);
+    }
+    else {
+
+        /*
+        If we end up here then i2 contains 0.
+        If i2 contains 0 then m is negative (or zero) and n is positive (or zero)
+        otherwise i2 cannot contain 0.
+
+        For the standard Interval logic we split by [1, +INF) and (-INF, -1] doing intersections,
+        but for some domains [m,n] this values does not exists.
+
+        We have [m,n] = .... [-1,0], [-1,1], [0,1] .... and k > 0.
+
+        There are 4 edge cases:
+        (1) If m > n (Constant propagation domain) then i2 is [0,0] or Top.
+        (2) If [m,n] == [0,0] then [1,+INF) and (-INF,-1] are not in the domain.
+        (3) If [m,n] == [-k,0] then [1,+INF) is not in the domain but (-INF,-1] it is.
+        (4) If [m,n] == [0,k] then (-INF,-1] is not in the domain but [1,+INF)  it is.
+
+        In all other cases [1, +INF) and (-INF, -1] are in the domain so we're fine.
+        */
+
+        /* (1) */
+        if (ctx->m > ctx->n) {
+            if (i2.a == INTERVAL_MIN_INF && i2.b == INTERVAL_PLUS_INF) {
+                /* Division by Top => return Top */
+                return i2;
+            }
+            else if (i2.a == 0 && i2.b == 0) {
+                /* Division by zero */
+                return (Interval) {.type = INTERVAL_BOTTOM};
+            }
+        }
+
+        /* (2), (3), (4) TODO: Maybe I can do better */
+        if (ctx->m == 0 || ctx->n == 0) {
+            return (Interval) {
+                .type = INTERVAL_STD,
+                .a = INTERVAL_MIN_INF,
+                .b = INTERVAL_PLUS_INF,
+            };
+        }
+
+        Interval pos = interval_create(ctx, 1, INTERVAL_PLUS_INF);
+        Interval neg = interval_create(ctx, INTERVAL_MIN_INF, -1);
+        Interval positive_part = interval_div(ctx, i1, interval_intersect(ctx, i2, pos));
+        Interval negative_part = interval_div(ctx, i1, interval_intersect(ctx, i2, neg));
+
+        return interval_union(ctx, positive_part, negative_part);
+    }
+}
 
 /* Widening and Narrowing operators */
 // static Interval interval_widening(const Abstract_Int_State *s, Interval a, Interval b);
@@ -417,7 +536,11 @@ static Interval exec_aexpr(const Abstract_Interval_Ctx *ctx, const Interval *s, 
             return interval_mult(ctx, i1, i2);
         }
     case NODE_DIV:
-        assert(0 && "TODO");
+        {
+            Interval i1 = exec_aexpr(ctx, s, node->as.child.left);
+            Interval i2 = exec_aexpr(ctx, s, node->as.child.right);
+            return interval_div(ctx, i1, i2);
+        }
     default:
         assert(0 && "UNREACHABLE");
     }

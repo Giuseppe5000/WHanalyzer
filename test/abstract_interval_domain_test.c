@@ -279,7 +279,7 @@ void interval_plus_test(void) {
     /* TODO: finish */
 }
 
-/* TODO: test minus and mult */
+/* TODO: test minus, mult, intersect, div */
 
 int main(void) {
     interval_leq_test();
