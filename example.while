@@ -5,7 +5,6 @@ t := 1 / z;
 
 while true do
   x := x + 1;
-  t := 2;
   if x = 10 then
     y := 10;
     z := 0

@@ -39,6 +39,7 @@ struct While_Analyzer {
         void (*state_free) (Abstract_State *s);
         void (*state_set_bottom) (const Abstract_Dom_Ctx *ctx, Abstract_State *s);
         void (*state_set_top) (const Abstract_Dom_Ctx *ctx, Abstract_State *s);
+        void (*state_print) (const Abstract_Dom_Ctx *ctx, const Abstract_State *s, FILE *fp);
 
         Abstract_State *(*exec_command) (const Abstract_Dom_Ctx *ctx, const Abstract_State *s, const AST_Node *command);
         bool (*state_leq) (const Abstract_Dom_Ctx *ctx, const Abstract_State *s1, const Abstract_State *s2);
@@ -207,13 +208,9 @@ void while_analyzer_exec(While_Analyzer *wa) {
         wa->func.state_set_bottom(wa->ctx, wa->state[i]);
     }
 
-    /* Print vars */
-    for (size_t i = 0; i < wa->vars.count; ++i) {
-        printf("(var) %.*s\n", (int) wa->vars.var[i].len, wa->vars.var[i].name);
-    }
-
     /* CFG graphviz */
     cfg_print_graphviz(wa->cfg);
+    printf("\n");
 
     /* === Worklist algorithm === */
     Worklist wl = {0};
@@ -285,6 +282,11 @@ void while_analyzer_exec(While_Analyzer *wa) {
             free(states);
         }
     }
+
+    for (size_t i = 0; i < wa->cfg->count; ++i) {
+        printf("[P%zu]\n", i);
+        wa->func.state_print(wa->ctx, wa->state[i], stdout);
+    }
 }
 
 void while_analyzer_free(While_Analyzer *wa) {
@@ -319,6 +321,10 @@ void abstract_interval_state_set_bottom_wrapper(const Abstract_Dom_Ctx *ctx, Abs
 
 void abstract_interval_state_set_top_wrapper(const Abstract_Dom_Ctx *ctx, Abstract_State *s) {
     abstract_interval_state_set_top((const Abstract_Interval_Ctx *) ctx, (Interval *) s);
+}
+
+void abstract_interval_state_print_wrapper(const Abstract_Dom_Ctx *ctx, const Abstract_State *s, FILE *fp) {
+    abstract_interval_state_print((const Abstract_Interval_Ctx *) ctx, (const Interval *) s, fp);
 }
 
 Abstract_State *abstract_interval_state_exec_command_wrapper(const Abstract_Dom_Ctx *ctx, const Abstract_State *s, const AST_Node *command) {
@@ -360,6 +366,7 @@ While_Analyzer *while_analyzer_init_parametric_interval(const char *src_path, in
     wa->func.state_free = abstract_interval_state_free_wrapper;
     wa->func.state_set_bottom = abstract_interval_state_set_bottom_wrapper;
     wa->func.state_set_top = abstract_interval_state_set_top_wrapper;
+    wa->func.state_print = abstract_interval_state_print_wrapper;
     wa->func.exec_command = abstract_interval_state_exec_command_wrapper;
     wa->func.state_leq = abstract_interval_state_leq_wrapper;
     wa->func.union_ = abstract_interval_state_union_wrapper;

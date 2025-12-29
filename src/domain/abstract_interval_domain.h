@@ -3,8 +3,7 @@
 
 #include "../lang/parser.h"
 #include "../common.h"
-#include <stdint.h>
-#include <stddef.h>
+#include <stdio.h>
 
 typedef struct Interval Interval;
 typedef struct Abstract_Interval_Ctx Abstract_Interval_Ctx;
@@ -43,6 +42,9 @@ void abstract_interval_state_free(Interval *s);
 /* Helper functions to set all the intervals of a state to bottom or top */
 void abstract_interval_state_set_bottom(const Abstract_Interval_Ctx *ctx, Interval *s);
 void abstract_interval_state_set_top(const Abstract_Interval_Ctx *ctx, Interval *s);
+
+/* Prints the state intervals (plain text) to fp */
+void abstract_interval_state_print(const Abstract_Interval_Ctx *ctx, const Interval *s, FILE *fp);
 
 /* Abstract commands */
 Interval *abstract_interval_state_exec_command(const Abstract_Interval_Ctx *ctx, const Interval *s, const AST_Node *command);

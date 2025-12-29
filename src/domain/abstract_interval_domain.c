@@ -462,6 +462,30 @@ void abstract_interval_state_set_top(const Abstract_Interval_Ctx *ctx, Interval 
     }
 }
 
+void abstract_interval_state_print(const Abstract_Interval_Ctx *ctx, const Interval *s, FILE *fp) {
+    for (size_t i = 0; i < ctx->vars->count; ++i) {
+        const char *var_name = ctx->vars->var[i].name;
+        size_t var_len = ctx->vars->var[i].len;
+
+        if (s[i].type == INTERVAL_BOTTOM) {
+            fprintf(fp, "  (%.*s) = BOTTOM\n", (int)var_len, var_name);
+        }
+        else if (s[i].a == INTERVAL_MIN_INF && s[i].b == INTERVAL_PLUS_INF) {
+            fprintf(fp, "  (%.*s) = TOP\n", (int)var_len, var_name);
+        }
+        else if (s[i].a == INTERVAL_MIN_INF) {
+            fprintf(fp, "  (%.*s) = (-INF, %ld]\n", (int)var_len, var_name, s[i].b);
+        }
+        else if (s[i].b == INTERVAL_PLUS_INF) {
+            fprintf(fp, "  (%.*s) = [%ld, +INF)\n", (int)var_len, var_name, s[i].a);
+        }
+        else {
+            fprintf(fp, "  (%.*s) = [%ld, %ld]\n", (int)var_len, var_name, s[i].a, s[i].b);
+        }
+    }
+    printf("\n");
+}
+
 bool abstract_interval_state_leq(const Abstract_Interval_Ctx *ctx, const Interval *s1, const Interval *s2) {
     bool result = true;
 
