@@ -31,13 +31,14 @@ statements:
 - [ ] Test and check correctness of arithmetic ops in the domain (especially division).
 
 Widening:
-    - [ ] Implement `abstract_interval_state_widening` with thresholds (just passing a list of numbers containing -INF and +INF, maybe in the ctx).
-    - [ ] Setup the widening in the analysis, selecting the widening points (the threshold will be taken from contants in the program and constants after constant propagation).
+- [ ] Implement `abstract_interval_state_widening` with thresholds (just passing a list of numbers containing -INF and +INF, maybe in the ctx).
+- [ ] Setup the widening in the analysis, selecting the widening points (the threshold will be taken from contants in the program and constants after constant propagation).
 
 Narrowing:
-    - [ ] Implement `abstract_interval_state_narrowing` and use it in the worklist algorithm.
-    - [ ] Setup the narrowing in the analysis, applied a finite number of times.
+- [ ] Implement `abstract_interval_state_narrowing` and use it in the worklist algorithm.
+- [ ] Setup the narrowing in the analysis, applied a finite number of times.
 
+Exec:
 - [ ] Implement abstract tests in `abstract_interval_state_exec_command`.
 
 Other things:
