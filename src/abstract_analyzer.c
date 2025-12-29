@@ -4,7 +4,7 @@
 #include "common.h"
 #include "abstract_domain.h"
 #include "domain/abstract_interval_domain.h"
-#include "wrappers/abstract_interval_domain_wrap.h"
+#include "domain/wrappers/abstract_interval_domain_wrap.h"
 
 #include <stdio.h>
 #include <stdlib.h>

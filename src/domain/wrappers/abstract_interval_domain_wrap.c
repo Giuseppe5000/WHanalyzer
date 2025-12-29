@@ -1,5 +1,5 @@
 #include "abstract_interval_domain_wrap.h"
-#include "../domain/abstract_interval_domain.h"
+#include "../abstract_interval_domain.h"
 
 static inline void abstract_interval_state_free_wrapper(Abstract_State *s) {
     abstract_interval_state_free((Interval *) s);
