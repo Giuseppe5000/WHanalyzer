@@ -37,10 +37,36 @@ struct While_Analyzer {
     const Abstract_Dom_Ops *ops;
 };
 
+/* ====================================== Utils ====================================== */
+
+static char *read_file(const char *src_path) {
+    /* Open source file */
+    FILE *fp = fopen(src_path, "r");
+
+    if (fp == NULL) {
+        fprintf(stderr, "[ERROR]: File %s not found.\n", src_path);
+        exit(1);
+    }
+
+    /* Getting file size */
+    fseek(fp, 0, SEEK_END);
+    long file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    /* Copy the text in a buffer */
+    char *src = xmalloc((file_size + 1)*sizeof(char));
+    fread(src, file_size, 1, fp);
+    src[file_size] = '\0';
+    fclose(fp);
+
+    return src;
+}
+
+/* ======================================#######====================================== */
+
 /* ================================ Vars dynamic array  =============================== */
 
 static void vars_push(Variables *vars, String s) {
-
     /* Check if s is already present in the array */
     for (size_t i = 0; i < vars->count; ++i) {
         if (strncmp(vars->var[i].name, s.name, s.len) == 0) {
@@ -79,10 +105,100 @@ static void set_vars(While_Analyzer *wa) {
         }
     }
 }
+/* ======================================#######====================================== */
 
-/* ==================================================================================== */
 
-/* ============================== Worklist dynamic array  ============================= */
+/* ================================ Constant collection =============================== */
+
+typedef struct {
+    int64_t *data;
+    size_t count;
+    size_t capacity;
+} Constants;
+
+static void constant_push(Constants *c, int64_t constant) {
+    /* Check if s is already present in the array */
+    for (size_t i = 0; i < c->count; ++i) {
+        if (c->data[i] == constant) {
+            return;
+        }
+    }
+
+    if (c->count >= c->capacity) {
+        if (c->capacity == 0) {
+            c->capacity = 32; /* Inits with 32 elements */
+        } else {
+            c->capacity *= 2;
+        }
+        c->data = xrealloc(c->data, c->capacity*sizeof(int64_t));
+    }
+    c->data[c->count++] = constant;
+}
+
+static int int64_compare(const void *a, const void *b) {
+    const int64_t *a_int = (const int64_t *) a;
+    const int64_t *b_int = (const int64_t *) b;
+
+    if (*b_int < *a_int) {
+        return 1;
+    } else if (*b_int > *a_int) {
+        return -1;
+    } else {
+        return 0;
+    }
+}
+
+static void constant_collect(const char *src_path, Constants *constants) {
+
+    /* Collect constants in the source file */
+    char *src = read_file(src_path);
+    Lexer *lex = lex_init(src);
+
+    Token t = lex_next(lex);
+    while (t.type != TOKEN_EOF) {
+        if (t.type == TOKEN_NUM) {
+            constant_push(constants, t.as.num);
+        }
+        t = lex_next(lex);
+    }
+
+    lex_free(lex);
+    free(src);
+
+    /* Using constant propagation domain for getting other constants */
+    While_Analyzer_Opt opt = {
+        .type = WHILE_ANALYZER_PARAMETRIC_INTERVAL,
+        .as = {
+            .parametric_interval = {
+                .m = 1,
+                .n = -1,
+            },
+        },
+    };
+
+    While_Analyzer_Exec_Opt exec_opt = {
+        .widening_delay = SIZE_MAX,
+        .descending_steps = 0,
+    };
+
+    While_Analyzer *constant_dom = while_analyzer_init(src_path, &opt);
+    while_analyzer_exec(constant_dom, &exec_opt);
+
+    for (size_t state = 0; state < constant_dom->cfg->count; ++state) {
+        for (size_t j = 0; j < constant_dom->vars.count; ++j) {
+            Interval i = ((Interval *)constant_dom->state[state])[j];
+            if (i.type != INTERVAL_BOTTOM && i.a != INTERVAL_MIN_INF) {
+                constant_push(constants, i.a);
+            }
+        }
+    }
+
+    while_analyzer_free(constant_dom);
+}
+
+/* ======================================#######====================================== */
+
+/* ================================== Worklist queue ================================== */
 
 /* The worklist is simply a queue (implemented ad linked list) */
 typedef struct Program_Point_Node Program_Point_Node;
@@ -143,24 +259,22 @@ static size_t worklist_dequeue(Worklist *wl) {
         return id;
     }
 }
+/* ======================================#######====================================== */
 
-/* ==================================================================================== */
 
 /* ======================== Parametric interval domain Int(m,n) ======================= */
-static void while_analyzer_init_parametric_interval(While_Analyzer *wa, int64_t m, int64_t n) {
+static void while_analyzer_init_parametric_interval(While_Analyzer *wa, const char *src_path, int64_t m, int64_t n) {
 
-    /* if m > n then this part will be skipped and the widening_points will be [-INF, +INF] */
+    /* Dynamic array of (sorted) constants, by default with -INF and +INF as widening threshold */
+    Constants c = {0};
+    constant_push(&c, INTERVAL_MIN_INF);
+    constant_push(&c, INTERVAL_PLUS_INF);
 
-    /* TODO: Constant analysis */
-    /* Make a new lexer and then use the next collecting all the numerals */
+    if (m <= n) {
+        constant_collect(src_path, &c);
+    }
 
-    /* TODO: Constant propagation */
-    /*
-    Call while_analyzer_init with the interval configuration [m,n] = [1,-1].
-    Call while_analyzer_exec and then for each state collect the constants [k,k].
-    Call while_analyzer_free.
-    */
-
+    qsort(c.data, c.count, sizeof(int64_t), int64_compare);
 
     /* Domain context setup */
     wa->ctx = abstract_interval_ctx_init(m, n, &(wa->vars));
@@ -175,35 +289,20 @@ static void while_analyzer_init_parametric_interval(While_Analyzer *wa, int64_t 
     /* Link all domain functions */
     wa->ops = &abstract_interval_ops;
 }
-/* ==================================================================================== */
+
+/* ======================================#######====================================== */
+
+
 
 /* Default init for all types of domain */
 While_Analyzer *while_analyzer_init(const char *src_path, const While_Analyzer_Opt *opt) {
-    /* Open source file */
-    FILE *fp = fopen(src_path, "r");
-
-    if (fp == NULL) {
-        fprintf(stderr, "[ERROR]: File %s not found.\n", src_path);
-        exit(1);
-    }
-
-    /* Getting file size */
-    fseek(fp, 0, SEEK_END);
-    long file_size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    /* Copy the text in a buffer */
-    char *src = xmalloc((file_size + 1)*sizeof(char));
-    fread(src, file_size, 1, fp);
-    src[file_size] = '\0';
-    fclose(fp);
 
     /* Init analyzer */
     While_Analyzer *wa = xmalloc(sizeof(While_Analyzer));
-    wa->src = src;
+    wa->src = read_file(src_path);
 
     /* Lexer */
-    Lexer *lex = lex_init(src);
+    Lexer *lex = lex_init(wa->src);
 
     /* AST */
     AST_Node *ast = parser_parse(lex);
@@ -223,7 +322,7 @@ While_Analyzer *while_analyzer_init(const char *src_path, const While_Analyzer_O
         {
             int64_t m = opt->as.parametric_interval.m;
             int64_t n = opt->as.parametric_interval.n;
-            while_analyzer_init_parametric_interval(wa, m, n);
+            while_analyzer_init_parametric_interval(wa, src_path, m, n);
             break;
         }
     default:

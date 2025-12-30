@@ -5,26 +5,6 @@
 #include <assert.h>
 #include <inttypes.h>
 
-#define INTERVAL_PLUS_INF INT64_MAX
-#define INTERVAL_MIN_INF INT64_MIN
-
-enum Interval_Type {
-    INTERVAL_BOTTOM, /* Bottom element */
-    INTERVAL_STD,    /* Standard interval (Top included) */
-};
-
-/*
-Define the integer interval [a,b].
-If a or b are INF, then their value is:
-    INTERVAL_PLUS_INF for represent infinite.
-    INTERVAL_MIN_INF for represent -infinite.
-*/
-struct Interval {
-    enum Interval_Type type;
-    int64_t a;
-    int64_t b;
-};
-
 struct Abstract_Interval_Ctx {
     int64_t m;
     int64_t n;
