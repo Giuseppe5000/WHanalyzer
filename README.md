@@ -16,12 +16,10 @@ There is only one abstract domain: the **Parametric Interval** $\text{Int}_{m,n}
 Given $m, n \in \mathbb{Z} \cup \{-\infty, +\infty\}$,\
 the domain is defined as:
 
-$
-\text{Int}_{m,n} \triangleq \{\varnothing, \mathbb{Z} \} \cup \{ [k, k] \mid k \in \mathbb{Z} \} \cup \{ [a, b] \mid a < b, [a, b] \subseteq [m, n] \} \cup \{ (-\infty, k] \mid k \in [m, n] \} \cup \{ [k, +\infty) \mid k \in [m, n] \}
-$
+$ \text{Int}_{m,n} \triangleq \{\varnothing, \mathbb{Z} \} \cup \{ [k, k] \mid k \in \mathbb{Z} \} \cup \{ [a, b] \mid a < b, [a, b] \subseteq [m, n] \} \cup \{ (-\infty, k] \mid k \in [m, n] \} \cup \{ [k, +\infty) \mid k \in [m, n] \} $
 
 Some notes about $m, n$:
-  - With $m, n = -\infty, +\infty\ $ the domain will become the standard interval domain (Int/Box).
+  - With $(m, n) = (-\infty, +\infty)\ $ the domain will become the standard interval domain (Int/Box).
   - With $m > n$ the domain will become the constant propagation domain.
 
 ## While Language grammar
