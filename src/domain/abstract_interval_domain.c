@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #define INTERVAL_PLUS_INF INT64_MAX
 #define INTERVAL_MIN_INF INT64_MIN
@@ -476,13 +477,13 @@ void abstract_interval_state_print(const Abstract_Interval_Ctx *ctx, const Inter
             fprintf(fp, "  (%.*s) = TOP\n", (int)var_len, var_name);
         }
         else if (s[i].a == INTERVAL_MIN_INF) {
-            fprintf(fp, "  (%.*s) = (-INF, %ld]\n", (int)var_len, var_name, s[i].b);
+            fprintf(fp, "  (%.*s) = (-INF, %"PRId64"]\n", (int)var_len, var_name, s[i].b);
         }
         else if (s[i].b == INTERVAL_PLUS_INF) {
-            fprintf(fp, "  (%.*s) = [%ld, +INF)\n", (int)var_len, var_name, s[i].a);
+            fprintf(fp, "  (%.*s) = [%"PRId64", +INF)\n", (int)var_len, var_name, s[i].a);
         }
         else {
-            fprintf(fp, "  (%.*s) = [%ld, %ld]\n", (int)var_len, var_name, s[i].a, s[i].b);
+            fprintf(fp, "  (%.*s) = [%"PRId64", %"PRId64"]\n", (int)var_len, var_name, s[i].a, s[i].b);
         }
     }
     printf("\n");

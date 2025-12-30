@@ -231,7 +231,6 @@ static void build_cfg(CFG *cfg, AST_Node *root) {
 }
 
 void cfg_print_graphviz(CFG *cfg, FILE *fp) {
-    fprintf(fp, "https://dreampuf.github.io/GraphvizOnline/?engine=dot#\n");
     fprintf(fp, "digraph G {\n");
     fprintf(fp, "\tnode [shape=circle]\n\n");
     for (size_t i = 0; i < cfg->count; ++i) {

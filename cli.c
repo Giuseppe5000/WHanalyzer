@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 void print_help(char **argv) {
     fprintf(stderr, "Usage: %s COMMAND [ARGS]\n\n", argv[0]);
@@ -36,9 +37,14 @@ void print_help_analyze(char **argv) {
     fprintf(stderr, "Run '%s analyze DOMAIN' for more information on a specific domain.\n", argv[0]);
 }
 
-void print_help_analyze_p_interval(char **argv) {
+void print_help_analyze_pinterval(char **argv) {
     fprintf(stderr, "Usage: %s analyze p_interval SOURCE [OPTIONS]\n\n", argv[0]);
-    fprintf(stderr, "TODO: Parametric interval exaplain.\n\n");
+    fprintf(stderr, "The abstract domain of parametric interval Int(m,n) is defined as the union of this sets:\n");
+    fprintf(stderr, "  { BOTTOM, TOP }\n");
+    fprintf(stderr, "  { [k,k] | k ∈ Z }\n");
+    fprintf(stderr, "  { [a, b] | a < b, [a, b] ⊆ [m, n] }\n");
+    fprintf(stderr, "  { (-INF, k] | k ∈ [m, n] }\n");
+    fprintf(stderr, "  { [k, +INF) | k ∈ [m, n] }\n\n");
 
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -m INT          Lower bound of the domain (default: -INF).\n");
@@ -47,56 +53,44 @@ void print_help_analyze_p_interval(char **argv) {
     fprintf(stderr, "  -dsteps N       Number of descending steps (narrowing) (default: 0).\n\n");
 
     fprintf(stderr, "Arguments:\n");
-    fprintf(stderr, "  SOURCE          Path to the source file (While language).\n");
+    fprintf(stderr, "  SOURCE          Path to the source file (While language).\n\n");
+
+    fprintf(stderr, "Notes on (m,n):\n");
+    fprintf(stderr, "  (-INF,+INF)     Standard interval abstract domain.\n");
+    fprintf(stderr, "  m > n           Constant propagation abstract domain.\n");
 }
 
-/* If 'opt' string is in argv[i] ... argv[argc-2] then returns the index of the next string in argv (the option) */
-int get_opt(const char *opt, int i, int argc, char **argv) {
-    while (i < argc) {
-        if (strcmp(opt, argv[i]) == 0) {
-            /* If there is the opt but not the value */
-            if (i+1 == argc) {
-                return i; /* Returns the opt if there is no value, this is an ugly patch but it works */
-            }
-            return i+1;
-        }
-        i++;
-    }
-    return -1;
+bool parse_int64(const char *arg, void *n) {
+    int64_t *n_int = (int64_t *)n;
+    char *endptr;
+    *n_int = strtoll(arg, &endptr, 10);
+    return *endptr == '\0';
 }
 
-bool parse_int64(const char *arg, int64_t *n) {
-    if (isdigit(*arg) || *arg == '-') {
-        const char *start = arg;
-        arg++;
-
-        while (isdigit(*arg)) {
-            arg++;
-        }
-
-        if (*arg != '\0') {
-            return false;
-        }
-
-        *n = strtoll(start, NULL, 10);
-        return true;
-    }
-    return false;
+bool parse_size(const char *arg, void *n) {
+    size_t *n_size = (size_t *)n;
+    if (*arg == '-') return false;
+    char *endptr;
+    *n_size = strtoull(arg, &endptr, 10);
+    return *endptr == '\0';
 }
 
-bool parse_size(const char *arg, size_t *n) {
-    if (isdigit(*arg)) {
-        const char *start = arg;
-
-        while (isdigit(*arg)) {
-            arg++;
+typedef bool (*parse_opt_val)(const char *arg, void *n);
+bool get_opt(void *opt_val, const char *opt, bool *opt_found, parse_opt_val parse, int i, int argc, char **argv) {
+    if (strcmp(opt, argv[i]) == 0) {
+        if (*opt_found) {
+            fprintf(stderr, "Parsing error: (%s) redundant option.\n", opt);
+            exit(1);
         }
-
-        if (*arg != '\0') {
-            return false;
+        if (i + 1 >= argc) {
+            fprintf(stderr, "Parsing error: (%s) missing value.\n", opt);
+            exit(1);
         }
-
-        *n = strtoull(start, NULL, 10);
+        if (!parse(argv[i+1], opt_val)) {
+            fprintf(stderr, "Parsing error: (%s) incorrect value type.\n", opt);
+            exit(1);
+        }
+        *opt_found = true;
         return true;
     }
     return false;
@@ -111,6 +105,7 @@ void handle_cfg_cmd(int argc, char **argv) {
         const char *src_path = argv[2];
         While_Analyzer_Opt opt = {0};
         While_Analyzer *wa = while_analyzer_init(src_path, &opt);
+        printf("https://dreampuf.github.io/GraphvizOnline/?engine=dot#\n");
         while_analyzer_cfg_dump(wa, stdout);
         while_analyzer_free(wa);
     }
@@ -126,7 +121,7 @@ void handle_analyze_cmd(int argc, char **argv) {
     }
     else if (argc == 3) {
         if (strcmp(argv[2], "pinterval") == 0) {
-            print_help_analyze_p_interval(argv);
+            print_help_analyze_pinterval(argv);
         }
         else {
             print_help_analyze(argv);
@@ -151,43 +146,45 @@ void handle_analyze_cmd(int argc, char **argv) {
 
         const char *src_path = argv[3];
 
-        int m = get_opt("-m", 4, argc, argv);
-        int n = get_opt("-n", 4, argc, argv);
-        int wdelay = get_opt("-wdelay", 4, argc, argv);
-        int dsteps = get_opt("-dsteps", 4, argc, argv);
+        bool m_opt = false;
+        bool n_opt = false;
+        bool wdelay_opt = false;
+        bool dsteps_opt = false;
+        
+        /* Check options */
+        for (int i = 4; i < argc; i+=2) {
+            bool value_found = false;
+            value_found = value_found || get_opt(&opt.as.parametric_interval.m, "-m", &m_opt, parse_int64, i, argc, argv);
+            value_found = value_found || get_opt(&opt.as.parametric_interval.n, "-n", &n_opt, parse_int64, i, argc, argv);
+            value_found = value_found || get_opt(&exec_opt.widening_delay,      "-wdelay", &wdelay_opt, parse_size, i, argc, argv);
+            value_found = value_found || get_opt(&exec_opt.descending_steps,    "-dsteps", &dsteps_opt, parse_size, i, argc, argv);
 
-        if (m != -1) {
-            if (!parse_int64(argv[m], &opt.as.parametric_interval.m)) {
-                fprintf(stderr, "Parsing error: (-m) INT expected.\n");
-                return;
-            }
-        }
-        if (n != -1) {
-            if (!parse_int64(argv[n], &opt.as.parametric_interval.n)) {
-                fprintf(stderr, "Parsing error: (-n) INT expected.\n");
-                return;
-            }
-        }
-        if (wdelay != -1) {
-            if (!parse_size(argv[wdelay], &exec_opt.widening_delay)) {
-                fprintf(stderr, "Parsing error: (-wdelay) N expected.\n");
-                return;
-            }
-        }
-        if (dsteps != -1) {
-            if (!parse_size(argv[dsteps], &exec_opt.descending_steps)) {
-                fprintf(stderr, "Parsing error: (-dsteps) N expected.\n");
-                return;
+            if (!value_found) {
+                fprintf(stderr, "Parsing error: (%s) invalid option.\n", argv[i]);
+                exit(1);
             }
         }
 
+        /* Analysis */
         printf("\n/========================\\\n");
         printf("|    Analysis options    |\n");
         printf("|========================|\n");
         printf("  domain : pinterval\n");
-        printf("  m      : %s\n", opt.as.parametric_interval.m == INT64_MIN ? "-INF" : argv[m]);
-        printf("  n      : %s\n", opt.as.parametric_interval.n == INT64_MAX ? "+INF" : argv[n]);
-        printf("  wdelay : %s\n", exec_opt.widening_delay == SIZE_MAX ? "disabled" : argv[wdelay]);
+        if (opt.as.parametric_interval.m == INT64_MIN) {
+            printf("  m      : -INF\n");
+        } else {
+            printf("  m      : %" PRId64 "\n", opt.as.parametric_interval.m);
+        }
+        if (opt.as.parametric_interval.n == INT64_MAX) {
+            printf("  n      : +INF\n");
+        } else {
+            printf("  n      : %" PRId64 "\n", opt.as.parametric_interval.n);
+        }
+        if (exec_opt.widening_delay == SIZE_MAX) {
+            printf("  wdelay : disabled\n");
+        } else {
+            printf("  wdelay : %zu\n", exec_opt.widening_delay);
+        }
         printf("  dsteps : %zu\n", exec_opt.descending_steps);
         printf("\\========================/\n\n");
 
