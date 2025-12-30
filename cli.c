@@ -39,7 +39,8 @@ void print_help_analyze(char **argv) {
 
 void print_help_analyze_pinterval(char **argv) {
     fprintf(stderr, "Usage: %s analyze p_interval SOURCE [OPTIONS]\n\n", argv[0]);
-    fprintf(stderr, "The abstract domain of parametric interval Int(m,n) is defined as the union of this sets:\n");
+    fprintf(stderr, "Given m,n ∈ (Z union {-INF, +INF}),\n");
+    fprintf(stderr, "the abstract domain of parametric interval Int(m,n) is defined as the union of this sets:\n");
     fprintf(stderr, "  { BOTTOM, TOP }\n");
     fprintf(stderr, "  { [k,k] | k ∈ Z }\n");
     fprintf(stderr, "  { [a, b] | a < b, [a, b] ⊆ [m, n] }\n");
@@ -108,6 +109,7 @@ void handle_cfg_cmd(int argc, char **argv) {
         printf("https://dreampuf.github.io/GraphvizOnline/?engine=dot#\n");
         while_analyzer_cfg_dump(wa, stdout);
         while_analyzer_free(wa);
+        printf("\n(You can also use Graphviz locally with '$ dot -Tpng -o graph.png')\n");
     }
     else {
         print_help_cfg(argv);
@@ -146,18 +148,26 @@ void handle_analyze_cmd(int argc, char **argv) {
 
         const char *src_path = argv[3];
 
-        bool m_opt = false;
-        bool n_opt = false;
-        bool wdelay_opt = false;
-        bool dsteps_opt = false;
+        bool m_found = false;
+        bool n_found = false;
+        bool wdelay_found = false;
+        bool dsteps_found = false;
         
         /* Check options */
         for (int i = 4; i < argc; i+=2) {
             bool value_found = false;
-            value_found = value_found || get_opt(&opt.as.parametric_interval.m, "-m", &m_opt, parse_int64, i, argc, argv);
-            value_found = value_found || get_opt(&opt.as.parametric_interval.n, "-n", &n_opt, parse_int64, i, argc, argv);
-            value_found = value_found || get_opt(&exec_opt.widening_delay,      "-wdelay", &wdelay_opt, parse_size, i, argc, argv);
-            value_found = value_found || get_opt(&exec_opt.descending_steps,    "-dsteps", &dsteps_opt, parse_size, i, argc, argv);
+            if (get_opt(&opt.as.parametric_interval.m, "-m", &m_found, parse_int64, i, argc, argv)) {
+                value_found = true;
+            }
+            if (get_opt(&opt.as.parametric_interval.n, "-n", &n_found, parse_int64, i, argc, argv)) {
+                value_found = true;
+            }
+            if (get_opt(&exec_opt.widening_delay, "-wdelay", &wdelay_found, parse_size, i, argc, argv)) {
+                value_found = true;
+            }
+            if (get_opt(&exec_opt.descending_steps, "-dsteps", &dsteps_found, parse_size, i, argc, argv)) {
+                value_found = true;
+            }
 
             if (!value_found) {
                 fprintf(stderr, "Parsing error: (%s) invalid option.\n", argv[i]);

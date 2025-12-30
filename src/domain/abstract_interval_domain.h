@@ -27,7 +27,8 @@ of N Intervals will be returned.
 
 [NOTE]: This function sets all intervals to bottom.
 
-The domain of parametric intervals is defined as the union of this sets:
+Given m,n ∈ (Z union {-INF, +INF}),
+the domain of parametric intervals is defined as the union of this sets:
     { BOTTOM, TOP }
     { [k,k] | k ∈ Z }
     { [a, b] | a < b, [a, b] ⊆ [m, n] }
