@@ -56,7 +56,7 @@ int get_opt(const char *opt, int i, int argc, char **argv) {
         if (strcmp(opt, argv[i]) == 0) {
             /* If there is the opt but not the value */
             if (i+1 == argc) {
-                return i; /* Returns the opt if there is no value */
+                return i; /* Returns the opt if there is no value, this is an ugly patch but it works */
             }
             return i+1;
         }
@@ -151,7 +151,6 @@ void handle_analyze_cmd(int argc, char **argv) {
 
         const char *src_path = argv[3];
 
-        /* get_opt return NULL if not found or the pointer to the start of the flag */
         int m = get_opt("-m", 4, argc, argv);
         int n = get_opt("-n", 4, argc, argv);
         int wdelay = get_opt("-wdelay", 4, argc, argv);
