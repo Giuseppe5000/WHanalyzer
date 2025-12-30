@@ -27,9 +27,6 @@ struct While_Analyzer {
     /* Abstract domain context */
     Abstract_Dom_Ctx *ctx;
 
-    /* All variables present in the input program */
-    Variables vars;
-
     /* Source code of the input program */
     char *src;
 
@@ -66,74 +63,24 @@ static char *read_file(const char *src_path) {
 
 /* ================================ Vars dynamic array  =============================== */
 
-static void vars_push(Variables *vars, String s) {
-    /* Check if s is already present in the array */
-    for (size_t i = 0; i < vars->count; ++i) {
-        if (strncmp(vars->var[i].name, s.name, s.len) == 0) {
-            return;
+static void vars_collect(While_Analyzer *wa, Variables *vars) {
+    Lexer *lex = lex_init(wa->src);
+
+    Token t = lex_next(lex);
+    while (t.type != TOKEN_EOF) {
+        if (t.type == TOKEN_VAR) {
+            vars_push_unique(vars, t.as.str);
         }
+        t = lex_next(lex);
     }
 
-    if (vars->count >= vars->capacity) {
-        if (vars->capacity == 0) {
-            vars->capacity = 32; /* Inits with 32 elements */
-        } else {
-            vars->capacity *= 2;
-        }
-        vars->var = xrealloc(vars->var, vars->capacity*sizeof(String));
-    }
-    vars->var[vars->count++] = s;
+    lex_free(lex);
 }
 
-static void set_vars(While_Analyzer *wa) {
-    memset(&(wa->vars), 0, sizeof(Variables));
-
-    for (size_t i = 0; i < wa->cfg->count; ++i) {
-        CFG_Node node = wa->cfg->nodes[i];
-        for (size_t j = 0; j < node.edge_count; ++j) {
-            CFG_Edge edge = node.edges[j];
-
-            if (edge.type == EDGE_ASSIGN) {
-                const char *str = edge.as.assign->as.child.left->as.var.name;
-                size_t len = edge.as.assign->as.child.left->as.var.len;
-                String s = {
-                    .name = str,
-                    .len = len,
-                };
-                vars_push(&(wa->vars), s);
-            }
-        }
-    }
-}
 /* ======================================#######====================================== */
 
 
 /* ================================ Constant collection =============================== */
-
-typedef struct {
-    int64_t *data;
-    size_t count;
-    size_t capacity;
-} Constants;
-
-static void constant_push(Constants *c, int64_t constant) {
-    /* Check if s is already present in the array */
-    for (size_t i = 0; i < c->count; ++i) {
-        if (c->data[i] == constant) {
-            return;
-        }
-    }
-
-    if (c->count >= c->capacity) {
-        if (c->capacity == 0) {
-            c->capacity = 32; /* Inits with 32 elements */
-        } else {
-            c->capacity *= 2;
-        }
-        c->data = xrealloc(c->data, c->capacity*sizeof(int64_t));
-    }
-    c->data[c->count++] = constant;
-}
 
 static int int64_compare(const void *a, const void *b) {
     const int64_t *a_int = (const int64_t *) a;
@@ -148,7 +95,7 @@ static int int64_compare(const void *a, const void *b) {
     }
 }
 
-static void constant_collect(const char *src_path, Constants *constants) {
+static void constant_collect(const char *src_path, Constants *constants, size_t vars_count) {
 
     /* Collect constants in the source file */
     char *src = read_file(src_path);
@@ -157,7 +104,7 @@ static void constant_collect(const char *src_path, Constants *constants) {
     Token t = lex_next(lex);
     while (t.type != TOKEN_EOF) {
         if (t.type == TOKEN_NUM) {
-            constant_push(constants, t.as.num);
+            constant_push_unique(constants, t.as.num);
         }
         t = lex_next(lex);
     }
@@ -185,10 +132,10 @@ static void constant_collect(const char *src_path, Constants *constants) {
     while_analyzer_exec(constant_dom, &exec_opt);
 
     for (size_t state = 0; state < constant_dom->cfg->count; ++state) {
-        for (size_t j = 0; j < constant_dom->vars.count; ++j) {
+        for (size_t j = 0; j < vars_count; ++j) {
             Interval i = ((Interval *)constant_dom->state[state])[j];
             if (i.type != INTERVAL_BOTTOM && i.a != INTERVAL_MIN_INF) {
-                constant_push(constants, i.a);
+                constant_push_unique(constants, i.a);
             }
         }
     }
@@ -265,19 +212,23 @@ static size_t worklist_dequeue(Worklist *wl) {
 /* ======================== Parametric interval domain Int(m,n) ======================= */
 static void while_analyzer_init_parametric_interval(While_Analyzer *wa, const char *src_path, int64_t m, int64_t n) {
 
+    /* Collect variables in the source */
+    Variables vars = {0};
+    vars_collect(wa, &vars);
+
     /* Dynamic array of (sorted) constants, by default with -INF and +INF as widening threshold */
     Constants c = {0};
-    constant_push(&c, INTERVAL_MIN_INF);
-    constant_push(&c, INTERVAL_PLUS_INF);
+    constant_push_unique(&c, INTERVAL_MIN_INF);
+    constant_push_unique(&c, INTERVAL_PLUS_INF);
 
     if (m <= n) {
-        constant_collect(src_path, &c);
+        constant_collect(src_path, &c, vars.count);
     }
 
     qsort(c.data, c.count, sizeof(int64_t), int64_compare);
 
     /* Domain context setup */
-    wa->ctx = abstract_interval_ctx_init(m, n, &(wa->vars));
+    wa->ctx = abstract_interval_ctx_init(m, n, vars, c);
 
     /* Alloc abstract states for all program points */
     wa->state = malloc(sizeof(Abstract_State *) * wa->cfg->count);
@@ -311,10 +262,6 @@ While_Analyzer *while_analyzer_init(const char *src_path, const While_Analyzer_O
     /* Get CFG */
     wa->cfg = cfg_get(ast);
     parser_free_ast_node(ast);
-
-    /* Set the vars present in the input program in wa->vars */
-    /* TODO: Here I can build a new lexer and collect all the VAR tokens */
-    set_vars(wa);
 
     /* Domain specific init */
     switch (opt->type) {
@@ -434,6 +381,5 @@ void while_analyzer_free(While_Analyzer *wa) {
     wa->ops->ctx_free(wa->ctx);
     free(wa->src);
     cfg_free(wa->cfg);
-    free(wa->vars.var);
     free(wa);
 }

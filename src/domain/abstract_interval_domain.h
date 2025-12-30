@@ -32,7 +32,7 @@ Return the domain context, setting parameters for Int(m,n) and the variables of 
 
 [NOTE]: The ownership of the 'vars' array is up to the caller.
 */
-Abstract_Interval_Ctx *abstract_interval_ctx_init(int64_t m, int64_t n, const Variables *vars);
+Abstract_Interval_Ctx *abstract_interval_ctx_init(int64_t m, int64_t n, Variables vars, Constants c);
 
 /* Free the context */
 void abstract_interval_ctx_free(Abstract_Interval_Ctx *ctx);
