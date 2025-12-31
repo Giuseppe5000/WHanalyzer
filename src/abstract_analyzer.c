@@ -61,7 +61,7 @@ static char *read_file(const char *src_path) {
 
 /* ======================================#######====================================== */
 
-/* ================================ Vars dynamic array  =============================== */
+/* ============================== Variables collection =============================== */
 
 static void vars_collect(While_Analyzer *wa, Variables *vars) {
     Lexer *lex = lex_init(wa->src);
@@ -287,6 +287,9 @@ void while_analyzer_exec(While_Analyzer *wa, const While_Analyzer_Exec_Opt *opt)
         wa->ops->state_set_bottom(wa->ctx, wa->state[i]);
     }
 
+    /* Create a counter for each point (needed for opt->widening_delay) */
+    size_t *step_count = xmalloc(sizeof(size_t)*wa->cfg->count);
+
     /* === Worklist algorithm === */
     Worklist wl = {0};
     worklist_init(&wl);
@@ -299,6 +302,7 @@ void while_analyzer_exec(While_Analyzer *wa, const While_Analyzer_Exec_Opt *opt)
     while(wl.tail != NULL) {
         size_t id = worklist_dequeue(&wl);
         CFG_Node node = wa->cfg->nodes[id];
+        step_count[id]++;
 
         if (id != 0) {
             Abstract_State **states = xmalloc(sizeof(Abstract_State *) * node.preds_count);
@@ -336,6 +340,13 @@ void while_analyzer_exec(While_Analyzer *wa, const While_Analyzer_Exec_Opt *opt)
                 wa->ops->state_free(prev_acc);
             }
 
+            /* Apply widening if we are on a widening point */
+            if (node.is_while && step_count[id] > opt->widening_delay) {
+                Abstract_State *prev_acc = acc;
+                acc = wa->ops->widening(wa->ctx, wa->state[id], acc);
+                wa->ops->state_free(prev_acc);
+            }
+
             /* If state changed signal the node dependencies */
             bool state_changed = !(wa->ops->state_leq(wa->ctx, wa->state[id], acc) && wa->ops->state_leq(wa->ctx, acc, wa->state[id]));
             if (state_changed) {
@@ -357,7 +368,7 @@ void while_analyzer_exec(While_Analyzer *wa, const While_Analyzer_Exec_Opt *opt)
             free(states);
         }
     }
-
+    free(step_count);
 }
 
 void while_analyzer_states_dump(const While_Analyzer *wa, FILE *fp) {

@@ -43,6 +43,8 @@ struct CFG_Node{
     /* Array of nodes that have an edge coming here */
     size_t *preds;
     size_t preds_count;
+
+    bool is_while;
 };
 
 typedef struct {

@@ -12,6 +12,7 @@ static CFG_Node build_node(size_t id) {
         .edge_count = 0,
         .preds = NULL,
         .preds_count = 0,
+        .is_while = false,
     };
 
     return node;
@@ -188,6 +189,7 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
     case NODE_WHILE:
         /* Loop invariant Node */
         cfg->nodes[*counter] = build_node(*counter);
+        cfg->nodes[*counter].is_while = true;
 
         cfg->nodes[*counter].edges[0].src = *counter;
         cfg->nodes[*counter].edges[0].dst = -1;
