@@ -48,10 +48,12 @@ void print_help_analyze_pinterval(char **argv) {
     fprintf(stderr, "  { [k, +INF) | k ∈ [m, n] }\n\n");
 
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  -m INT          Lower bound of the domain (default: -INF).\n");
-    fprintf(stderr, "  -n INT          Upper bound of the domain (default: +INF).\n");
-    fprintf(stderr, "  -wdelay N       Number of steps to wait before applying widening (default: disabled).\n");
-    fprintf(stderr, "  -dsteps N       Number of descending steps (narrowing) (default: 0).\n\n");
+    fprintf(stderr, "  --m INT          Lower bound of the domain (default: -INF).\n");
+    fprintf(stderr, "  --n INT          Upper bound of the domain (default: +INF).\n");
+    fprintf(stderr, "  --wdelay N       Number of steps to wait before applying widening (default: disabled).\n");
+    fprintf(stderr, "  --dsteps N       Number of descending steps (narrowing) (default: 0).\n");
+    fprintf(stderr, "  --init FILE      Initial abstract state configuration for the entry point,\n");
+    fprintf(stderr, "                   each abstract domain has its own representation (default: TOP).\n\n");
 
     fprintf(stderr, "Arguments:\n");
     fprintf(stderr, "  SOURCE          Path to the source file (While language).\n\n");
@@ -74,6 +76,12 @@ bool parse_size(const char *arg, void *n) {
     char *endptr;
     *n_size = strtoull(arg, &endptr, 10);
     return *endptr == '\0';
+}
+
+bool parse_string(const char *arg, void *c) {
+    const char **string = (const char **)c;
+    *string = arg;
+    return true;
 }
 
 typedef bool (*parse_opt_val)(const char *arg, void *n);
@@ -144,6 +152,7 @@ void handle_analyze_cmd(int argc, char **argv) {
         While_Analyzer_Exec_Opt exec_opt = {
             .widening_delay = SIZE_MAX,
             .descending_steps = 0,
+            .init_state_path = NULL,
         };
 
         const char *src_path = argv[3];
@@ -152,20 +161,24 @@ void handle_analyze_cmd(int argc, char **argv) {
         bool n_found = false;
         bool wdelay_found = false;
         bool dsteps_found = false;
+        bool init_found = false;
         
         /* Check options */
         for (int i = 4; i < argc; i+=2) {
             bool value_found = false;
-            if (get_opt(&opt.as.parametric_interval.m, "-m", &m_found, parse_int64, i, argc, argv)) {
+            if (get_opt(&opt.as.parametric_interval.m, "--m", &m_found, parse_int64, i, argc, argv)) {
                 value_found = true;
             }
-            if (get_opt(&opt.as.parametric_interval.n, "-n", &n_found, parse_int64, i, argc, argv)) {
+            if (get_opt(&opt.as.parametric_interval.n, "--n", &n_found, parse_int64, i, argc, argv)) {
                 value_found = true;
             }
-            if (get_opt(&exec_opt.widening_delay, "-wdelay", &wdelay_found, parse_size, i, argc, argv)) {
+            if (get_opt(&exec_opt.widening_delay, "--wdelay", &wdelay_found, parse_size, i, argc, argv)) {
                 value_found = true;
             }
-            if (get_opt(&exec_opt.descending_steps, "-dsteps", &dsteps_found, parse_size, i, argc, argv)) {
+            if (get_opt(&exec_opt.descending_steps, "--dsteps", &dsteps_found, parse_size, i, argc, argv)) {
+                value_found = true;
+            }
+            if (get_opt(&exec_opt.init_state_path, "--init", &init_found, parse_string, i, argc, argv)) {
                 value_found = true;
             }
 
@@ -191,11 +204,16 @@ void handle_analyze_cmd(int argc, char **argv) {
             printf("  n      : %" PRId64 "\n", opt.as.parametric_interval.n);
         }
         if (exec_opt.widening_delay == SIZE_MAX) {
-            printf("  wdelay : disabled\n");
+            printf("  wdelay : (disabled)\n");
         } else {
             printf("  wdelay : %zu\n", exec_opt.widening_delay);
         }
         printf("  dsteps : %zu\n", exec_opt.descending_steps);
+        if (exec_opt.init_state_path == NULL) {
+            printf("  init   : (TOP)\n");
+        } else {
+            printf("  init   : %s\n", exec_opt.init_state_path);
+        }
         printf("\\========================/\n\n");
 
         While_Analyzer *wa = while_analyzer_init(src_path, &opt);

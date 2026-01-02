@@ -29,6 +29,9 @@ typedef struct {
 
     /* Number of descending steps (narrowing) */
     size_t descending_steps;
+
+    /* Initial abstract state conf file path for the entry point (each domain has its own representation) */
+    const char *init_state_path;
 } While_Analyzer_Exec_Opt;
 
 /* Inits the analyzer structure based on the specific domain configuration */
