@@ -147,12 +147,11 @@ static void constant_collect(const char *src_path, Constants *constants, size_t 
 
 /* ================================== Worklist queue ================================== */
 
-/* TODO: performance can be optimized with a doubly linked list */
-
 /* The worklist is simply a queue (implemented ad linked list) */
 typedef struct Program_Point_Node Program_Point_Node;
 struct Program_Point_Node {
     Program_Point_Node *next;
+    Program_Point_Node *prev;
     size_t id;
 };
 
@@ -172,11 +171,14 @@ static void worklist_enqueue(Worklist *wl, size_t point_id) {
 
     if (wl->head == NULL && wl->tail == NULL) {
         wl->head = node;
-        node->next = NULL;
         wl->tail = node;
+        node->next = NULL;
+        node->prev = NULL;
     }
     else {
         node->next = wl->head;
+        node->prev = NULL;
+        wl->head->prev = node;
         wl->head = node;
     }
 }
@@ -196,12 +198,9 @@ static size_t worklist_dequeue(Worklist *wl) {
             wl->head = NULL;
             wl->tail = NULL;
         } else {
-            /* Set the tail to the prev element */
-            Program_Point_Node *p = wl->head;
-            while (p->next != to_free) {
-                p = p->next;
-            }
-            wl->tail = p;
+            /* Set the tail to the prev element (there are almost 2 nodes) */
+            wl->tail = to_free->prev;
+            wl->tail->next = NULL;
         }
 
         free(to_free);
