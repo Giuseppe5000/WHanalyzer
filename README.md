@@ -53,8 +53,7 @@ Widening:
 - [x] Check if the way of counting the steps in the exec is correct, if widen_delay = 5, then the widen happens at the sixth iteration.
 
 Narrowing:
-- [ ] Implement `abstract_interval_state_narrowing` and use it in the worklist algorithm.
-- [ ] Setup the narrowing in the analysis, applied a finite number of times.
+- [x] Setup the narrowing in the analysis, applied a finite number of times.
 
 Exec:
 - [ ] Implement abstract tests in `abstract_interval_state_exec_command`.

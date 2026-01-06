@@ -241,6 +241,53 @@ static void while_analyzer_init_parametric_interval(While_Analyzer *wa, const ch
 
 /* /////////////////////////////////////////////////////////////////////////////////// */
 
+// Apply the abstract tranfer function for each node predecessor and then returns the union
+static Abstract_State *abstract_transfer_union(const While_Analyzer *wa, size_t id) {
+    CFG_Node node = wa->cfg->nodes[id];
+    Abstract_State **states = xmalloc(sizeof(Abstract_State *) * node.preds_count);
+
+    // Apply the abstract transfer function for each predecessor
+    for (size_t i = 0; i < node.preds_count; ++i) {
+        size_t pred = node.preds[i];
+        CFG_Edge edge;
+
+        if (wa->cfg->nodes[pred].edges[0].dst == id) {
+            edge = wa->cfg->nodes[pred].edges[0];
+        } else {
+            edge = wa->cfg->nodes[pred].edges[1];
+        }
+
+        switch (edge.type) {
+        case EDGE_ASSIGN:
+            states[i] = wa->ops->exec_command(wa->ctx, wa->state[pred], edge.as.assign);
+            break;
+        case EDGE_GUARD:
+            states[i] = wa->ops->exec_command(wa->ctx, wa->state[pred], edge.as.guard.condition);
+            break;
+        case EDGE_SKIP:
+            states[i] = wa->ops->exec_command(wa->ctx, wa->state[pred], edge.as.skip);
+            break;
+        }
+    }
+
+    // Union of the results
+    Abstract_State *acc = wa->ops->union_(wa->ctx, states[0], states[0]);
+    Abstract_State *prev_acc = NULL;
+    for (size_t i = 1; i < node.preds_count; ++i) {
+        prev_acc = acc;
+        acc = wa->ops->union_(wa->ctx, acc, states[i]);
+        wa->ops->state_free(prev_acc);
+    }
+
+    // States free
+    for (size_t i = 0; i < node.preds_count; ++i) {
+        wa->ops->state_free(states[i]);
+    }
+    free(states);
+
+    return acc;
+}
+
 
 // Default init for all types of domain
 While_Analyzer *while_analyzer_init(const char *src_path, const While_Analyzer_Opt *opt) {
@@ -302,70 +349,51 @@ void while_analyzer_exec(While_Analyzer *wa, const While_Analyzer_Exec_Opt *opt)
         step_count[id]++;
 
         if (id != 0) {
-            Abstract_State **states = xmalloc(sizeof(Abstract_State *) * node.preds_count);
-
-            // Apply the abstract transfer function for each predecessor
-            for (size_t i = 0; i < node.preds_count; ++i) {
-                size_t pred = node.preds[i];
-                CFG_Edge edge;
-
-                if (wa->cfg->nodes[pred].edges[0].dst == id) {
-                    edge = wa->cfg->nodes[pred].edges[0];
-                } else {
-                    edge = wa->cfg->nodes[pred].edges[1];
-                }
-
-                switch (edge.type) {
-                case EDGE_ASSIGN:
-                    states[i] = wa->ops->exec_command(wa->ctx, wa->state[pred], edge.as.assign);
-                    break;
-                case EDGE_GUARD:
-                    states[i] = wa->ops->exec_command(wa->ctx, wa->state[pred], edge.as.guard.condition);
-                    break;
-                case EDGE_SKIP:
-                    states[i] = wa->ops->exec_command(wa->ctx, wa->state[pred], edge.as.skip);
-                    break;
-                }
-            }
-
-            // Union of the results
-            Abstract_State *acc = wa->ops->union_(wa->ctx, states[0], states[0]);
-            Abstract_State *prev_acc = NULL;
-            for (size_t i = 1; i < node.preds_count; ++i) {
-                prev_acc = acc;
-                acc = wa->ops->union_(wa->ctx, acc, states[i]);
-                wa->ops->state_free(prev_acc);
-            }
+            // Union of the preds transfer functions
+            Abstract_State *transf_union = abstract_transfer_union(wa, id);
 
             // Apply widening if we are on a widening point
             if (node.is_while && step_count[id] > opt->widening_delay) {
-                Abstract_State *prev_acc = acc;
-                acc = wa->ops->widening(wa->ctx, wa->state[id], acc);
-                wa->ops->state_free(prev_acc);
+                Abstract_State *prev_transf = transf_union;
+                transf_union = wa->ops->widening(wa->ctx, wa->state[id], transf_union);
+                wa->ops->state_free(prev_transf);
             }
 
             // If state changed signal the node dependencies
-            bool state_changed = !(wa->ops->state_leq(wa->ctx, wa->state[id], acc) && wa->ops->state_leq(wa->ctx, acc, wa->state[id]));
+            bool state_changed = !(wa->ops->state_leq(wa->ctx, wa->state[id], transf_union) && wa->ops->state_leq(wa->ctx, transf_union, wa->state[id]));
             if (state_changed) {
                 wa->ops->state_free(wa->state[id]);
-                wa->state[id] = acc;
+                wa->state[id] = transf_union;
 
                 for (size_t i = 0; i < node.edge_count; ++i) {
                     size_t dep = node.edges[i].dst;
                     worklist_enqueue(&wl, dep);
                 }
             } else {
-                wa->ops->state_free(acc);
+                wa->ops->state_free(transf_union);
             }
-
-            // States free
-            for (size_t i = 0; i < node.preds_count; ++i) {
-                wa->ops->state_free(states[i]);
-            }
-            free(states);
         }
     }
+
     free(step_count);
+
+    // Apply narrowing
+    for (size_t i = 0; i < opt->descending_steps; ++i) {
+        for (size_t id = 0; i < wa->cfg->count; ++i) {
+            CFG_Node node = wa->cfg->nodes[id];
+
+            // Apply only on widening points (excluding the entry node)
+            if (id != 0 && node.is_while) {
+                Abstract_State *transf_union = abstract_transfer_union(wa, id);
+                Abstract_State *res = wa->ops->narrowing(wa->ctx, wa->state[id], transf_union);
+                wa->ops->state_free(transf_union);
+
+                // Modify the state
+                wa->ops->state_free(wa->state[id]);
+                wa->state[id] = res;
+            }
+        }
+    }
 }
 
 void while_analyzer_states_dump(const While_Analyzer *wa, FILE *fp) {
