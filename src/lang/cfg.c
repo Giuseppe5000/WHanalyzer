@@ -140,14 +140,18 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         cfg->nodes[*counter].edges[0].src = *counter;
         cfg->nodes[*counter].edges[0].dst = -1;
         cfg->nodes[*counter].edges[0].type = EDGE_GUARD;
-        cfg->nodes[*counter].edges[0].as.guard.condition = parser_copy_node(node->as.child.condition);
-        cfg->nodes[*counter].edges[0].as.guard.val = true;
+        cfg->nodes[*counter].edges[0].as.condition = parser_copy_node(node->as.child.condition);
 
         cfg->nodes[*counter].edges[1].src = *counter;
         cfg->nodes[*counter].edges[1].dst = -1;
         cfg->nodes[*counter].edges[1].type = EDGE_GUARD;
-        cfg->nodes[*counter].edges[1].as.guard.condition = parser_copy_node(node->as.child.condition);
-        cfg->nodes[*counter].edges[1].as.guard.val = false;
+
+        // Negate the condition node for getting the false case
+        AST_Node *false_cond = xmalloc(sizeof(AST_Node));
+        false_cond->type = NODE_NOT;
+        false_cond->as.child.left = parser_copy_node(node->as.child.condition);
+        cfg->nodes[*counter].edges[1].as.condition = false_cond;
+
 
         wire_predecessors(cfg, *counter, preds);
 
@@ -189,14 +193,17 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         cfg->nodes[*counter].edges[0].src = *counter;
         cfg->nodes[*counter].edges[0].dst = -1;
         cfg->nodes[*counter].edges[0].type = EDGE_GUARD;
-        cfg->nodes[*counter].edges[0].as.guard.condition = parser_copy_node(node->as.child.condition);
-        cfg->nodes[*counter].edges[0].as.guard.val = true;
+        cfg->nodes[*counter].edges[0].as.condition = parser_copy_node(node->as.child.condition);
 
         cfg->nodes[*counter].edges[1].src = *counter;
         cfg->nodes[*counter].edges[1].dst = -1;
         cfg->nodes[*counter].edges[1].type = EDGE_GUARD;
-        cfg->nodes[*counter].edges[1].as.guard.condition = parser_copy_node(node->as.child.condition);
-        cfg->nodes[*counter].edges[1].as.guard.val = false;
+
+        // Negate the condition node for getting the exit condition
+        AST_Node *exit_cond = xmalloc(sizeof(AST_Node));
+        exit_cond->type = NODE_NOT;
+        exit_cond->as.child.left = parser_copy_node(node->as.child.condition);
+        cfg->nodes[*counter].edges[1].as.condition = exit_cond;
 
         wire_predecessors(cfg, *counter, preds);
 
@@ -258,7 +265,7 @@ void cfg_print_graphviz(CFG *cfg, FILE *fp) {
                 fprintf(fp, "\"]\n");
                 break;
             case EDGE_GUARD:
-                fprintf(fp, " [label=\"%s\"]\n", node.edges[j].as.guard.val ? "T" : "F");
+                fprintf(fp, " [label=\"%s\"]\n", j == 0 ? "T" : "F");
                 break;
             case EDGE_SKIP:
                 fprintf(fp, " [label=\"skip\"]\n");
@@ -288,7 +295,7 @@ void cfg_free(CFG *cfg) {
                 parser_free_ast_node(edge.as.assign);
             }
             else if (edge.type == EDGE_GUARD) {
-                parser_free_ast_node(edge.as.guard.condition);
+                parser_free_ast_node(edge.as.condition);
             }
             else if (edge.type == EDGE_SKIP) {
                 parser_free_ast_node(edge.as.skip);

@@ -20,10 +20,7 @@ struct CFG_Edge {
     union {
         AST_Node *skip;
         AST_Node *assign;
-        struct {
-            AST_Node *condition;
-            bool val;
-        } guard;
+        AST_Node *condition;
     } as;
 };
 
@@ -35,6 +32,10 @@ struct CFG_Node{
     // The size is fixed because one node can have at maximum 2 edges in output.
     // This is true only for the While Language, because it does not have like
     // switch case and similar.
+    //
+    // Note: When we are on a while loop/if stmt node then
+    //       the first edge is the true condition,
+    //       and the second is the false condition.
     CFG_Edge edges[2];
     size_t edge_count;
 

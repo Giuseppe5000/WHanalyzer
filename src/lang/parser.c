@@ -83,8 +83,8 @@ static void parser_print_ast_impl(const AST_Node *node, int indent) {
             break;
         }
 
-        parser_print_ast_impl(node->as.child.left, indent + 2);
-        if (node->type != NODE_WHILE) parser_print_ast_impl(node->as.child.right, indent + 2);
+        if (node->type != NODE_SKIP) parser_print_ast_impl(node->as.child.left, indent + 2);
+        if (node->type != NODE_WHILE && node->type != NODE_SKIP && node->type != NODE_NOT) parser_print_ast_impl(node->as.child.right, indent + 2);
     }
 }
 
