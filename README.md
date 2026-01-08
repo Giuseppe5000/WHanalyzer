@@ -1,10 +1,14 @@
-# Abstract interpreter for the abstract equational semantics X# of While Language
+# WHanalyzer - A static analyzer for the While Language
 
 ## Overview
 TODO
 
+## Requirements
+- C99-compatible compiler.
+- Make (optional, you can just put all *.c files into the compiler).
+
 ## How to build
-Just
+Just run
 ``` bash
 $ make
 ```
@@ -45,23 +49,24 @@ statements:
 ```
 
 ## TODO
-- [ ] Test and check correctness of arithmetic ops in the domain (especially division).
 
-Widening:
-- [x] Implement `abstract_interval_state_widening` with thresholds (just passing a list of numbers containing -INF and +INF, maybe in the ctx).
-- [x] Setup the widening in the analysis, selecting the widening points (the threshold will be taken from contants in the program and constants after constant propagation).
-- [x] Check if the way of counting the steps in the exec is correct, if widen_delay = 5, then the widen happens at the sixth iteration.
+Strange issue: if the first node (program point) is a while loop, then the worklist algo will not update the loop invariant program point.
+This because the definition of the transfer function says that the first program point is always the same.
+So the question is: should I do the transfer function also for the first program point?
+- In this case there is a fix to do in `abstract_transfer_function`, because it assumes that there is at least one predecessor (because all program points excepts the first has one).
+- Otherwise I could make impossible to have a while loop as first program point (like by adding a skip instr in the CFG creation) and mantain all the rest unchanged.
 
-Narrowing:
-- [x] Setup the narrowing in the analysis, applied a finite number of times.
+Note: this problem isn't a real problem where there isn't an init file, in that case P0 (the while) will remain TOP but it is correct.\
+The problem exists when a init config is set, in that case the while should not remain the same.
 
-Exec:
-- [ ] Implement abstract tests in `abstract_interval_state_exec_command`.
-- [x] Let the `While_Analyzer_Exec_Opt` take a string that represents the initial abstract state for the entry program point. Then each domain must have a function that takes that configuration and create a abstract state with that values. (examples of configuration in the examples).
+- [ ] Test and check correctness of arithmetic ops in the domain.
+- [ ] Implement abstract tests in `abstract_interval_state_exec_command` (There is a TODO in the code).
 
 Other things:
-- [x] Current variable darray stores only vars that are lvalue, so if a var is used only as rvalue (undefined variable) then this causes UB.
 - [ ] Check TODOs in the code.
+- [ ] Check comments.
+- [ ] Styling and const correctness.
+- [ ] Complete README.
 
 
 

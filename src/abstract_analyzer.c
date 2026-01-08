@@ -242,6 +242,7 @@ static void while_analyzer_init_parametric_interval(While_Analyzer *wa, const ch
 /* /////////////////////////////////////////////////////////////////////////////////// */
 
 // Apply the abstract tranfer function for each node predecessor and then returns the union
+// NOTE: This function assumes that the 'wa->cfg->nodes[id]' has at least one predecessor.
 static Abstract_State *abstract_transfer_union(const While_Analyzer *wa, size_t id) {
     CFG_Node node = wa->cfg->nodes[id];
     Abstract_State **states = xmalloc(sizeof(Abstract_State *) * node.preds_count);

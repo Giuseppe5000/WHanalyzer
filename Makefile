@@ -1,4 +1,3 @@
-CC=gcc
 CFLAGS=-Wall -Wextra -std=c99 -pedantic -Werror=vla -ggdb
 
 all: cli test
