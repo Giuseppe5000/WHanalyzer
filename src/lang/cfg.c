@@ -34,6 +34,11 @@ static size_t count_nodes(AST_Node *node, size_t counter) {
         counter = count_nodes(node->as.child.right, counter);
         break;
     case NODE_WHILE:
+        // If there is a while as first stmt then we add an extra node (skip).
+        // Here we just add this skip node to the count.
+        if (counter == 1) {
+           counter++;
+        }
         counter++;
         counter = count_nodes(node->as.child.left, counter);
         break;
@@ -186,6 +191,23 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         free(preds_else_branch.data);
         break;
     case NODE_WHILE:
+
+        // If there is while as first stmt then we add an extra node (skip).
+        // This method handle a specific situation, when we have as first instruction
+        // a while loop and the init state is different from Top.
+        //
+        // In that case the state of the while could be refined,
+        // but the algorithm just skip and left unchanged the first node as a 'rule'.
+        //
+        // So as a fix we add an extra node that plays the role of the first node,
+        // letting the while become the second node.
+        if (*counter == 0) {
+            AST_Node *skip = xmalloc(sizeof(AST_Node));
+            skip->type = NODE_SKIP;
+            build_cfg_impl(cfg, skip, counter, preds);
+            free(skip);
+        }
+
         // Loop invariant Node
         cfg->nodes[*counter] = build_node(*counter);
         cfg->nodes[*counter].is_while = true;

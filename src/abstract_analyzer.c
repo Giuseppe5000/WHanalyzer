@@ -355,10 +355,9 @@ void while_analyzer_exec(While_Analyzer *wa, const While_Analyzer_Exec_Opt *opt)
     Worklist wl = {0};
     worklist_init(&wl);
 
-    // Add all the program points to the worklist
-    for (size_t i = 0; i < wa->cfg->count; ++i) {
-            worklist_enqueue(&wl, i);
-    }
+    // Add the second program point (P1) to the worklist.
+    // Skipping the first because it will not change.
+    worklist_enqueue(&wl, 1);
 
     while(wl.tail != NULL) {
         size_t id = worklist_dequeue(&wl);
@@ -399,9 +398,10 @@ void while_analyzer_exec(While_Analyzer *wa, const While_Analyzer_Exec_Opt *opt)
         for (size_t id = 0; id < wa->cfg->count; ++id) {
             CFG_Node node = wa->cfg->nodes[id];
 
-            // Apply only on widening points (excluding the entry node)
             if (id != 0) {
                 Abstract_State *res = abstract_transfer_union(wa, id);
+
+                // Apply narrowing only on widening points
                 if (node.is_while) {
                     Abstract_State *transf_union = res;
                     res = wa->ops->narrowing(wa->ctx, wa->state[id], transf_union);

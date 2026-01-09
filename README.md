@@ -1,4 +1,4 @@
-# WHanalyzer - A static analyzer for the While Language
+# WHanalyzer - Static analyzer (While Language)
 
 ## Overview
 TODO
@@ -49,15 +49,6 @@ statements:
 ```
 
 ## TODO
-
-Strange issue: if the first node (program point) is a while loop, then the worklist algo will not update the loop invariant program point.
-This because the definition of the transfer function says that the first program point is always the same.
-So the question is: should I do the transfer function also for the first program point?
-- In this case there is a fix to do in `abstract_transfer_function`, because it assumes that there is at least one predecessor (because all program points excepts the first has one).
-- Otherwise I could make impossible to have a while loop as first program point (like by adding a skip instr in the CFG creation) and mantain all the rest unchanged.
-
-Note: this problem isn't a real problem where there isn't an init file, in that case P0 (the while) will remain TOP but it is correct.\
-The problem exists when a init config is set, in that case the while should not remain the same.
 
 - [ ] Test and check correctness of arithmetic ops in the domain.
 - [ ] Implement abstract tests in `abstract_interval_state_exec_command` (There is a TODO in the code).
