@@ -260,17 +260,12 @@ static AST_Node *parse_atom_bexp(Lexer *lex) {
     Token t = lex_peek(lex);
 
     // OPAR
-    // if (t.type == TOKEN_OPAR) {
-    //     lex_next(lex);
-
-    //     // TODO: Check if parse_bexp is correct
-    //     // Otherwise it must be an aexp
-    //     //
-    //     // For doing this I must return an error code (like NULL) in parse_bexp
-    //     AST_Node *node = parse_bexp(lex);
-    //     expect(lex_next(lex), TOKEN_CPAR);
-    //     return node;
-    // }
+    if (t.type == TOKEN_OPAR) {
+        lex_next(lex);
+        AST_Node *node = parse_bexp(lex);
+        expect(lex_next(lex), TOKEN_CPAR);
+        return node;
+    }
 
     // True
     if (t.type == TOKEN_TRUE) {
