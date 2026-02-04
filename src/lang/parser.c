@@ -5,6 +5,12 @@
 #include <stdio.h>
 #include <assert.h>
 
+AST_Node *create_node(enum Node_Type type) {
+    AST_Node *node = xcalloc(1, sizeof(AST_Node));
+    node->type = type;
+    return node;
+}
+
 void parser_free_ast_node(AST_Node *node) {
     if (node != NULL) {
 
@@ -126,8 +132,7 @@ AST_Node *parser_copy_node(const AST_Node *node) {
 
         // Leaf nodes
         if (node->type == NODE_NUM || node->type == NODE_VAR || node->type == NODE_BOOL_LITERAL) {
-            AST_Node *node_copy = xmalloc(sizeof(AST_Node));
-            node_copy->type = node->type;
+            AST_Node *node_copy = create_node(node->type);
 
             if (node->type == NODE_NUM) {
                 node_copy->as.num = node->as.num;
@@ -143,8 +148,7 @@ AST_Node *parser_copy_node(const AST_Node *node) {
             return node_copy;
         }
         else {
-            AST_Node *node_copy = xmalloc(sizeof(AST_Node));
-            node_copy->type = node->type;
+            AST_Node *node_copy = create_node(node->type);
 
             node_copy->as.child.left = parser_copy_node(node->as.child.left);
             node_copy->as.child.right = parser_copy_node(node->as.child.right);
@@ -162,14 +166,6 @@ AST_Node *parser_copy_node(const AST_Node *node) {
 
 static AST_Node *parse_stmt(Lexer *lex);
 static AST_Node *parse_bexp(Lexer *lex);
-
-// Alloc a zero initialized AST node
-static AST_Node *create_node(enum Node_Type type) {
-    AST_Node *node = xmalloc(sizeof(AST_Node));
-    memset(node, 0, sizeof(AST_Node));
-    node->type = type;
-    return node;
-}
 
 static void expect(Token t, enum Token_Type type) {
     if (t.type != type) {

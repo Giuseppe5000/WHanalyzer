@@ -152,8 +152,7 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         cfg->nodes[*counter].edges[1].type = EDGE_GUARD;
 
         // Negate the condition node for getting the false case
-        AST_Node *false_cond = xmalloc(sizeof(AST_Node));
-        false_cond->type = NODE_NOT;
+        AST_Node *false_cond = create_node(NODE_NOT);
         false_cond->as.child.left = parser_copy_node(node->as.child.condition);
         cfg->nodes[*counter].edges[1].command = false_cond;
 
@@ -202,8 +201,7 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         // So as a fix we add an extra node that plays the role of the first node,
         // letting the while become the second node.
         if (*counter == 0) {
-            AST_Node *skip = xmalloc(sizeof(AST_Node));
-            skip->type = NODE_SKIP;
+            AST_Node *skip = create_node(NODE_SKIP);
             build_cfg_impl(cfg, skip, counter, preds);
             free(skip);
         }
@@ -222,8 +220,7 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
         cfg->nodes[*counter].edges[1].type = EDGE_GUARD;
 
         // Negate the condition node for getting the exit condition
-        AST_Node *exit_cond = xmalloc(sizeof(AST_Node));
-        exit_cond->type = NODE_NOT;
+        AST_Node *exit_cond = create_node(NODE_NOT);
         exit_cond->as.child.left = parser_copy_node(node->as.child.condition);
         cfg->nodes[*counter].edges[1].command = exit_cond;
 
@@ -298,15 +295,7 @@ void cfg_free(CFG *cfg) {
         CFG_Node node = cfg->nodes[i];
         for (size_t j = 0; j < node.edge_count; ++j) {
             CFG_Edge edge = node.edges[j];
-            if (edge.type == EDGE_ASSIGN) {
-                parser_free_ast_node(edge.command);
-            }
-            else if (edge.type == EDGE_GUARD) {
-                parser_free_ast_node(edge.command);
-            }
-            else if (edge.type == EDGE_SKIP) {
-                parser_free_ast_node(edge.command);
-            }
+            parser_free_ast_node(edge.command);
         }
 
         // Predecessors array free

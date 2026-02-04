@@ -83,6 +83,9 @@ AST_Node *parser_parse(Lexer *lex);
 // Prints the ast through 'fp' (as S-expression)
 void parser_print_ast(const AST_Node *node, FILE *fp);
 
+// Allocate a zero initialized AST node
+AST_Node *create_node(enum Node_Type type);
+
 // Returns an dynamic allocated copy of the tree in 'node'
 AST_Node *parser_copy_node(const AST_Node *node);
 
