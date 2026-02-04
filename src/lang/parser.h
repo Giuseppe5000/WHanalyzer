@@ -43,6 +43,11 @@ enum Node_Type {
     NODE_LEQ,
     NODE_NOT,
     NODE_AND,
+     // == Not valid in syntax, only needed for bexpr manipulation ==
+     NODE_OR,
+     NODE_NEQ,
+     NODE_GT,
+     // ====
 
     // Statements
     NODE_ASSIGN,

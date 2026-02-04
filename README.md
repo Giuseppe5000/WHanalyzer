@@ -48,10 +48,13 @@ statements:
 
 ```
 
+## References
+TODO
+
 ## TODO
 
 - [ ] Test and check correctness of arithmetic ops in the domain.
-- [ ] Implement abstract tests in `abstract_interval_state_exec_command` (There is a TODO in the code).
+- [x] Implement abstract tests in `abstract_interval_state_exec_command` (There is a TODO in the code).
 
 Other things:
 - [ ] Check TODOs in the code.

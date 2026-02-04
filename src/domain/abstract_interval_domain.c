@@ -841,8 +841,23 @@ static void exec_bexp_backprop(const Abstract_Interval_Ctx *ctx, Interval *s, In
 // Exec the Bexp following the Advanced Abstract Tests method proposed in the Minè Tutorial (4.6)
 static Interval *abstract_interval_state_exec_bexp(const Abstract_Interval_Ctx *ctx, const Interval *s, const AST_Node *node) {
     switch (node->type) {
-    case NODE_EQ:
+    case NODE_BOOL_LITERAL:
+        {
+            bool value = node->as.boolean;
+            if (value) {
+                // No filtering
+                return clone_state(ctx, s);
+            } else {
+                // Always false, so return bottom
+                Interval *res = abstract_interval_state_init(ctx);
+                abstract_interval_state_set_bottom(ctx, res);
+                return res;
+            }
+        }
     case NODE_LEQ:
+    case NODE_EQ:
+    case NODE_NEQ:
+    case NODE_GT:
         {
             // Forward propagration
             Interval a1 = exec_aexpr(ctx, s, node->as.child.left);
@@ -853,6 +868,7 @@ static Interval *abstract_interval_state_exec_bexp(const Abstract_Interval_Ctx *
 
             // Select the right interval to intersect based on the node type
             Interval test_value = {0};
+
             if (node->type == NODE_LEQ) {
                 // (-INF,0]
                 test_value = (Interval) {
@@ -860,9 +876,27 @@ static Interval *abstract_interval_state_exec_bexp(const Abstract_Interval_Ctx *
                     .a = INTERVAL_MIN_INF,
                     .b = 0,
                 };
-            } else {
+            } else if (node->type == NODE_EQ) {
                 // [0,0]
-                test_value = interval_create(ctx, 0, 0);
+                test_value = (Interval) {
+                    .type = INTERVAL_STD,
+                    .a = 0,
+                    .b = 0,
+                };
+            } else if (node->type == NODE_NEQ) {
+                // TOP
+                test_value = (Interval) {
+                    .type = INTERVAL_STD,
+                    .a = INTERVAL_MIN_INF,
+                    .b = INTERVAL_PLUS_INF,
+                };
+            } else if (node->type == NODE_GT) {
+                // [1, +INF)
+                test_value = (Interval) {
+                    .type = INTERVAL_STD,
+                    .a = 1,
+                    .b = INTERVAL_PLUS_INF,
+                };
             }
 
             Interval root = interval_intersect(ctx, sub, test_value);
@@ -880,9 +914,75 @@ static Interval *abstract_interval_state_exec_bexp(const Abstract_Interval_Ctx *
             return new_s;
         }
     case NODE_NOT:
-        // TODO: Eliminate the negation from the bexp and the call itself
-        return clone_state(ctx, s);
+        {
+            // Transform the AST in order to eliminate the not expr
+            AST_Node *root = parser_copy_node(node->as.child.left);
 
+            switch (root->type) {
+            case NODE_BOOL_LITERAL:
+                root->as.boolean = !(root->as.boolean);
+                break;
+            case NODE_EQ:
+                root->type = NODE_NEQ;
+                break;
+            case NODE_LEQ:
+                root->type = NODE_GT;
+                break;
+            case NODE_NEQ:
+                root->type = NODE_EQ;
+                break;
+            case NODE_GT:
+                root->type = NODE_LEQ;
+                break;
+            case NODE_NOT:
+                {
+                    AST_Node *new_root = root->as.child.left;
+                    free(root);
+                    root = new_root;
+                    break;
+                }
+            case NODE_AND:
+                {
+                    // Transform into !b1 OR !b2
+                    root->type = NODE_OR;
+
+                    AST_Node *left = xmalloc(sizeof(AST_Node));
+                    left->type = NODE_NOT;
+                    left->as.child.left = root->as.child.left;
+
+                    AST_Node *right = xmalloc(sizeof(AST_Node));
+                    right->type = NODE_NOT;
+                    right->as.child.left = root->as.child.right;
+
+                    root->as.child.left = left;
+                    root->as.child.right = right;
+                    break;
+                }
+            case NODE_OR:
+                {
+                    // Transform into !b1 AND !b2
+                    root->type = NODE_AND;
+
+                    AST_Node *left = xmalloc(sizeof(AST_Node));
+                    left->type = NODE_NOT;
+                    left->as.child.left = root->as.child.left;
+
+                    AST_Node *right = xmalloc(sizeof(AST_Node));
+                    right->type = NODE_NOT;
+                    right->as.child.left = root->as.child.right;
+
+                    root->as.child.left = left;
+                    root->as.child.right = right;
+                    break;
+                }
+            default:
+                assert(0 && "UNREACHABLE");
+            }
+
+            Interval *res = abstract_interval_state_exec_bexp(ctx, s, root);
+            parser_free_ast_node(root);
+            return res;
+        }
     case NODE_AND:
         {
             // Exec the two bexp and do the intersection
@@ -890,6 +990,19 @@ static Interval *abstract_interval_state_exec_bexp(const Abstract_Interval_Ctx *
             Interval *s2 = abstract_interval_state_exec_bexp(ctx, s, node->as.child.right);
 
             Interval *res = abstract_interval_state_intersect(ctx, s1, s2);
+
+            free(s1);
+            free(s2);
+
+            return res;
+        }
+    case NODE_OR:
+        {
+            // Exec the two bexp and do the intersection
+            Interval *s1 = abstract_interval_state_exec_bexp(ctx, s, node->as.child.left);
+            Interval *s2 = abstract_interval_state_exec_bexp(ctx, s, node->as.child.right);
+
+            Interval *res = abstract_interval_state_union(ctx, s1, s2);
 
             free(s1);
             free(s2);
@@ -932,18 +1045,6 @@ Interval *abstract_interval_state_exec_command(const Abstract_Interval_Ctx *ctx,
         res = abstract_interval_state_exec_assign(ctx, s, command);
         break;
     case NODE_BOOL_LITERAL:
-        {
-            bool value = command->as.boolean;
-            if (value) {
-                // No filtering
-                res = clone_state(ctx, s);
-            } else {
-                // Always false, so return bottom
-                res = abstract_interval_state_init(ctx);
-                abstract_interval_state_set_bottom(ctx, res);
-            }
-            break;
-        }
     case NODE_EQ:
     case NODE_LEQ:
     case NODE_NOT:

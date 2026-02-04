@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <assert.h>
 
 void parser_free_ast_node(AST_Node *node) {
     if (node != NULL) {
@@ -111,6 +112,8 @@ static void parser_print_ast_impl(const AST_Node *node, FILE *fp) {
         parser_print_ast_impl(node->as.child.left, fp);
         fprintf(fp, "))");
         break;
+    default:
+        assert(0 && "UNREACHABLE");
     }
 }
 
