@@ -68,7 +68,7 @@ statements:
 
 ## TODO
 
-- [ ] Test and check correctness of arithmetic ops in the domain.
+- [x] Test and check correctness of arithmetic ops in the domain.
 - [x] Implement abstract tests in `abstract_interval_state_exec_command` (There is a TODO in the code).
 - [x] Implement parentheses for bexp
 
