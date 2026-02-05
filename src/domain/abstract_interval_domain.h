@@ -27,7 +27,7 @@ typedef struct Abstract_Interval_Ctx Abstract_Interval_Ctx;
 
 // Return the domain context, setting parameters for Int(m,n) and the variables of the program.
 //
-// [NOTE]: The ownership of the 'vars' array is up to the caller.
+// [NOTE]: The ownership of 'vars' and 'c' arrays are transfered to the ctx.
 Abstract_Interval_Ctx *abstract_interval_ctx_init(int64_t m, int64_t n, Variables vars, Constants c);
 
 // Free the context

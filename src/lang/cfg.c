@@ -18,7 +18,7 @@ static CFG_Node build_node(size_t id) {
     return node;
 }
 
-static size_t count_nodes(AST_Node *node, size_t counter) {
+static size_t count_nodes(const AST_Node *node, size_t counter) {
     switch (node->type) {
     case NODE_ASSIGN:
     case NODE_SKIP:
@@ -113,7 +113,7 @@ static void wire_predecessors(CFG *cfg, size_t cur_node, Pred_Stack *preds) {
 //
 // Then when we are on the successor node we can link to the predecessor using the 'wire_predecessors' utility.
 // For tracing all the predecessors (that can be arbitrary) we use the 'preds' stack.
-static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack *preds) {
+static void build_cfg_impl(CFG *cfg, const AST_Node *node, size_t *counter, Pred_Stack *preds) {
     switch (node->type) {
     case NODE_SKIP:
     case NODE_ASSIGN:
@@ -242,7 +242,7 @@ static void build_cfg_impl(CFG *cfg, AST_Node *node, size_t *counter, Pred_Stack
     }
 }
 
-static void build_cfg(CFG *cfg, AST_Node *root) {
+static void build_cfg(CFG *cfg, const AST_Node *root) {
     size_t counter = 0;
     Pred_Stack preds = {0};
     build_cfg_impl(cfg, root, &counter, &preds);
@@ -253,7 +253,7 @@ static void build_cfg(CFG *cfg, AST_Node *root) {
     free(preds.data);
 }
 
-void cfg_print_graphviz(CFG *cfg, FILE *fp) {
+void cfg_print_graphviz(const CFG *cfg, FILE *fp) {
     fprintf(fp, "digraph G {\n");
     fprintf(fp, "\tnode [shape=circle]\n\n");
     for (size_t i = 0; i < cfg->count; ++i) {
@@ -280,7 +280,7 @@ void cfg_print_graphviz(CFG *cfg, FILE *fp) {
     fprintf(fp, "}\n");
 }
 
-CFG *cfg_get(AST_Node *root) {
+CFG *cfg_get(const AST_Node *root) {
     CFG *cfg = xmalloc(sizeof(CFG));
     cfg->count = count_nodes(root, 1);
     cfg->nodes = xmalloc(sizeof(CFG_Node)*(cfg->count));

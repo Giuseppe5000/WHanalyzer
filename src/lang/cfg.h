@@ -48,10 +48,10 @@ typedef struct {
 } CFG;
 
 // Construct and returns the CFG
-CFG *cfg_get(AST_Node *root);
+CFG *cfg_get(const AST_Node *root);
 
 // Prints to 'fp' the Graphviz representation of the CFG
-void cfg_print_graphviz(CFG *cfg, FILE *fp);
+void cfg_print_graphviz(const CFG *cfg, FILE *fp);
 
 // Free the CFG
 void cfg_free(CFG *cfg);
