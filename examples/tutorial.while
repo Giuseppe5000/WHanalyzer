@@ -1,5 +1,5 @@
 x := 0;
 
-while x <= (40-1) do
+while x <= 39 do
   x := x + 1
 done

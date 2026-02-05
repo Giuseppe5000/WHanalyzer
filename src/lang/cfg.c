@@ -29,17 +29,14 @@ static size_t count_nodes(const AST_Node *node, size_t counter) {
         counter = count_nodes(node->as.child.right, counter);
         break;
     case NODE_IF:
-        counter++;
+        // 2 Skip nodes + if node
+        counter += 3;
         counter = count_nodes(node->as.child.left, counter);
         counter = count_nodes(node->as.child.right, counter);
         break;
     case NODE_WHILE:
-        // If there is a while as first stmt then we add an extra node (skip).
-        // Here we just add this skip node to the count.
-        if (counter == 1) {
-           counter++;
-        }
-        counter++;
+        // 2 Skip nodes + loop inv node
+        counter += 3;
         counter = count_nodes(node->as.child.left, counter);
         break;
     default:
@@ -123,11 +120,7 @@ static void build_cfg_impl(CFG *cfg, const AST_Node *node, size_t *counter, Pred
         cfg->nodes[*counter].edges[0].dst = -1;
         enum Edge_Type type = node->type == NODE_ASSIGN ? EDGE_ASSIGN : EDGE_SKIP;
         cfg->nodes[*counter].edges[0].type = type;
-        if (node->type == NODE_ASSIGN) {
-            cfg->nodes[*counter].edges[0].command = parser_copy_node(node);
-        } else {
-            cfg->nodes[*counter].edges[0].command = parser_copy_node(node);
-        }
+        cfg->nodes[*counter].edges[0].command = parser_copy_node(node);
 
         wire_predecessors(cfg, *counter, preds);
 
@@ -156,7 +149,6 @@ static void build_cfg_impl(CFG *cfg, const AST_Node *node, size_t *counter, Pred
         false_cond->as.child.left = parser_copy_node(node->as.child.condition);
         cfg->nodes[*counter].edges[1].command = false_cond;
 
-
         wire_predecessors(cfg, *counter, preds);
 
         const size_t if_cond = *counter;
@@ -165,6 +157,12 @@ static void build_cfg_impl(CFG *cfg, const AST_Node *node, size_t *counter, Pred
 
         // Build the two branch, saving the predecessors
         build_cfg_impl(cfg, node->as.child.left, counter, preds);
+
+        // Add a skip node after the last stmt of then branch
+        AST_Node *skip = create_node(NODE_SKIP);
+        build_cfg_impl(cfg, skip, counter, preds);
+        free(skip);
+
         Pred_Stack preds_then_branch = {0};
         while (preds->count != 0) {
             pred_stack_push(&preds_then_branch, pred_stack_pop(preds));
@@ -173,6 +171,12 @@ static void build_cfg_impl(CFG *cfg, const AST_Node *node, size_t *counter, Pred
         pred_stack_push(preds, if_cond);
 
         build_cfg_impl(cfg, node->as.child.right, counter, preds);
+
+        // Add a skip node after the last stmt of else branch
+        skip = create_node(NODE_SKIP);
+        build_cfg_impl(cfg, skip, counter, preds);
+        free(skip);
+
         Pred_Stack preds_else_branch = {0};
         while (preds->count != 0) {
             pred_stack_push(&preds_else_branch, pred_stack_pop(preds));
@@ -191,16 +195,8 @@ static void build_cfg_impl(CFG *cfg, const AST_Node *node, size_t *counter, Pred
         break;
     case NODE_WHILE:
 
-        // If there is while as first stmt then we add an extra node (skip).
-        // This method handle a specific situation, when we have as first instruction
-        // a while loop and the init state is different from Top.
-        //
-        // In that case the state of the while could be refined,
-        // but the algorithm just skip and left unchanged the first node as a 'rule'.
-        //
-        // So as a fix we add an extra node that plays the role of the first node,
-        // letting the while become the second node.
-        if (*counter == 0) {
+        // Add a skip node before the loop invariant node
+        {
             AST_Node *skip = create_node(NODE_SKIP);
             build_cfg_impl(cfg, skip, counter, preds);
             free(skip);
@@ -231,6 +227,11 @@ static void build_cfg_impl(CFG *cfg, const AST_Node *node, size_t *counter, Pred
         *counter += 1;
 
         build_cfg_impl(cfg, node->as.child.left, counter, preds);
+
+        // Add a skip node after the last stmt of the while body
+        skip = create_node(NODE_SKIP);
+        build_cfg_impl(cfg, skip, counter, preds);
+        free(skip);
 
         wire_predecessors(cfg, loop_inv, preds);
 
