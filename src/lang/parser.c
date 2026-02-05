@@ -202,7 +202,7 @@ static AST_Node *parse_factor_aexp(Lexer *lex) {
         return var_node;
     }
 
-    fprintf(stderr, "[ERROR]: Unexpected token of type %d while parsing aexp\n", t.type);
+    fprintf(stderr, "[ERROR]: Unexpected token while parsing aexp\n");
     exit(1);
 }
 
@@ -261,10 +261,21 @@ static AST_Node *parse_atom_bexp(Lexer *lex) {
 
     // OPAR
     if (t.type == TOKEN_OPAR) {
+
+        // Save the lexer state
+        Lexer *state = lex_save(lex);
         lex_next(lex);
+
         AST_Node *node = parse_bexp(lex);
-        expect(lex_next(lex), TOKEN_CPAR);
-        return node;
+        if (node != NULL) {
+            expect(lex_next(lex), TOKEN_CPAR);
+            return node;
+        }
+
+        // The expr is not a bexpr so it must be an aexpr,
+        // restore and fall through to reach the EQ/LEQ cases
+        lex_restore(lex, state);
+        lex_free(state);
     }
 
     // True
@@ -288,6 +299,7 @@ static AST_Node *parse_atom_bexp(Lexer *lex) {
         lex_next(lex);
         AST_Node *not_node = create_node(NODE_NOT);
         not_node->as.child.left = parse_bexp(lex);
+        if (not_node->as.child.left == NULL) return NULL;
         return not_node;
     }
 
@@ -311,12 +323,14 @@ static AST_Node *parse_atom_bexp(Lexer *lex) {
         return leq_node;
     }
 
-    fprintf(stderr, "[ERROR]: Unexpected token of type %d while parsing bexp\n", t.type);
-    exit(1);
+    // Here we return NULL instead of exit because with the bexp parentheses
+    // parsing we can fail and we need to try to parse an aexp instead (OPAR case)
+    return NULL;
 }
 
 static AST_Node *parse_bexp(Lexer *lex) {
     AST_Node *left = parse_atom_bexp(lex);
+    if (left == NULL) return NULL;
 
     Token t = lex_peek(lex);
     while (t.type == TOKEN_AND) {
@@ -325,12 +339,21 @@ static AST_Node *parse_bexp(Lexer *lex) {
         AST_Node *and_node = create_node(NODE_AND);
         and_node->as.child.left = left;
         and_node->as.child.right = parse_atom_bexp(lex);
+        if (and_node->as.child.right == NULL) return NULL;
+
         left = and_node;
 
         t = lex_peek(lex);
     }
 
     return left;
+}
+
+static void check_bexp_parsing_error(const AST_Node *node) {
+    if (node == NULL) {
+        fprintf(stderr, "[ERROR]: Unexpected token while parsing bexp\n");
+        exit(1);
+    }
 }
 
 static AST_Node *parse_atom_stmt(Lexer *lex) {
@@ -368,6 +391,7 @@ static AST_Node *parse_atom_stmt(Lexer *lex) {
 
         // Condition (b)
         if_node->as.child.condition = parse_bexp(lex);
+        check_bexp_parsing_error(if_node->as.child.condition);
 
         // Then symbol
         t = lex_next(lex);
@@ -396,6 +420,7 @@ static AST_Node *parse_atom_stmt(Lexer *lex) {
 
         // Condition (b)
         while_node->as.child.condition = parse_bexp(lex);
+        check_bexp_parsing_error(while_node->as.child.condition);
 
         // Do symbol
         t = lex_next(lex);

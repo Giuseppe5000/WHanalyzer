@@ -141,6 +141,18 @@ Token lex_peek(Lexer *lex) {
     return t;
 }
 
+Lexer *lex_save(const Lexer *lex) {
+    Lexer *state = xmalloc(sizeof(Lexer));
+    state->src = lex->src;
+    state->cursor = lex->cursor;
+    return state;
+}
+
+void lex_restore(Lexer *lex, const Lexer *state) {
+    lex->src = state->src;
+    lex->cursor = state->cursor;
+}
+
 void lex_free(Lexer *lex) {
     free(lex);
 }

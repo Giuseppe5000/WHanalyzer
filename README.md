@@ -55,7 +55,7 @@ TODO
 
 - [ ] Test and check correctness of arithmetic ops in the domain.
 - [x] Implement abstract tests in `abstract_interval_state_exec_command` (There is a TODO in the code).
-- [ ] Implement parentheses for bexp
+- [x] Implement parentheses for bexp
 
 Other things:
 - [ ] Check TODOs in the code.

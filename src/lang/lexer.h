@@ -59,6 +59,12 @@ Token lex_next(Lexer *lex);
 // Get next token, without consuming it
 Token lex_peek(Lexer *lex);
 
+// Create a new lexer equal to 'lex'
+Lexer *lex_save(const Lexer *lex);
+
+// Copy the 'state' into 'lex'
+void lex_restore(Lexer *lex, const Lexer *state);
+
 // Free the lexer
 void lex_free(Lexer *lex);
 
