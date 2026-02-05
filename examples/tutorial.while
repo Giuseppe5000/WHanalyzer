@@ -1,0 +1,5 @@
+x := 0;
+
+while x <= (40-1) do
+  x := x + 1
+done

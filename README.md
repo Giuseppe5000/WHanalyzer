@@ -75,6 +75,6 @@ statements:
 Other things:
 - [x] Check TODOs in the code.
 - [ ] Check comments.
-- [ ] Styling and const correctness.
-- [ ] Add more examples.
+- [x] Styling and const correctness.
+- [x] Add more examples.
 - [ ] Adjust fuzz.py (make it delete the test_case.while if it finish correcly).
