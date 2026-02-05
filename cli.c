@@ -72,9 +72,6 @@ bool parse_int64(const char *arg, void *n) {
 
 bool parse_size(const char *arg, void *n) {
     size_t *n_size = (size_t *)n;
-    while (isspace(*arg)) {
-        arg++;
-    }
     if (*arg == '-') return false;
     char *endptr;
     *n_size = strtoull(arg, &endptr, 10);

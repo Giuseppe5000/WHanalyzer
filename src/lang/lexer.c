@@ -1,10 +1,12 @@
 #include "lexer.h"
 #include "../common.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 
 struct Lexer {
     const char *src;
@@ -93,15 +95,19 @@ Token lex_next(Lexer *lex) {
 
     // Parse numbers (integers)
     if (isdigit(*lex->cursor)) {
-        const char *start = lex->cursor;
+        char *endptr;
+        errno = 0;
 
-        // Skip the number
-        while (isdigit(*lex->cursor)) {
-            lex->cursor++;
+        t.as.num = strtoll(lex->cursor, &endptr, 10);
+        t.type = TOKEN_NUM;
+
+        if (errno == ERANGE) {
+            fprintf(stderr, "[ERROR]: Overflow/Underflow when parsing a number\n");
+            exit(1);
         }
 
-        t.type = TOKEN_NUM;
-        t.as.num = atoll(start); // TODO: Better to use strtoll
+        lex->cursor = endptr;
+
         return t;
     }
 
@@ -128,8 +134,8 @@ Token lex_next(Lexer *lex) {
         return t;
     }
 
-    // TODO: Better to signal a syntax error
-    assert(0 && "UNREACHABLE");
+    fprintf(stderr, "[ERROR]: Unexpected character: %c\n", *lex->cursor);
+    exit(1);
 }
 
 Token lex_peek(Lexer *lex) {

@@ -73,7 +73,7 @@ statements:
 - [x] Implement parentheses for bexp
 
 Other things:
-- [ ] Check TODOs in the code.
+- [x] Check TODOs in the code.
 - [ ] Check comments.
 - [ ] Styling and const correctness.
 - [ ] Add more examples.
