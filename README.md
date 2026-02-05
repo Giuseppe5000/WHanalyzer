@@ -1,7 +1,20 @@
 # WHanalyzer - Static analyzer (While Language)
 
 ## Overview
-TODO
+The theory behind this static analyzer is called **Abstract Interpretation**.
+
+> Abstract Interpretation is a theory of sound approximation of the semantics of computer programs, based on monotonic functions over ordered sets, especially lattices. It can be viewed as a partial execution of a computer program which gains information about its semantics (e.g., control-flow, data-flow) without performing all the calculations.
+
+> Its main concrete application is formal static analysis, the automatic extraction of information about the possible executions of computer programs; such analyses have two main usages:
+> - inside compilers, to analyse programs to decide whether certain optimizations or transformations are applicable;
+> - for debugging or even the certification of programs against classes of bugs.
+
+> Abstract interpretation was formalized by the French computer scientist working couple Patrick Cousot and Radhia Cousot in the late 1970s.
+
+> Source: https://en.wikipedia.org/wiki/Abstract_interpretation.
+
+This project was made as an assignment for the Software Verification course of the University of Padua.
+It is written in C (C99) and has no external dependencies.
 
 ## Requirements
 - C99-compatible compiler.
@@ -49,7 +62,9 @@ statements:
 ```
 
 ## References
-TODO
+
+- Tutorial on Static Inference of Numeric Invariants by Abstract Interpretation (Antoine Miné): https://dl.acm.org/doi/10.1561/2500000034
+- Software Verification course: https://unipd.coursecatalogue.cineca.it/corsi/2025/2634/insegnamenti/2025/52879_490656_65775/2025/52879
 
 ## TODO
 
@@ -61,4 +76,5 @@ Other things:
 - [ ] Check TODOs in the code.
 - [ ] Check comments.
 - [ ] Styling and const correctness.
-- [ ] Complete README.
+- [ ] Add more examples.
+- [ ] Adjust fuzz.py (make it delete the test_case.while if it finish correcly).
