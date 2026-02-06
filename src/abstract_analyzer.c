@@ -144,7 +144,7 @@ static void constant_collect(const char *src_path, Constants *constants, size_t 
 
 /* ================================== Worklist queue ================================== */
 
-// The worklist is simply a queue (implemented ad linked list)
+// The worklist is simply a queue (implemented as doubly linked list)
 typedef struct Program_Point_Node Program_Point_Node;
 struct Program_Point_Node {
     Program_Point_Node *next;
@@ -349,7 +349,7 @@ void while_analyzer_exec(While_Analyzer *wa, const While_Analyzer_Exec_Opt *opt)
     // Skipping the first because it will not change.
     worklist_enqueue(&wl, 1);
 
-    while(wl.tail != NULL) {
+    while (wl.tail != NULL) {
         size_t id = worklist_dequeue(&wl);
         CFG_Node node = wa->cfg->nodes[id];
         step_count[id]++;

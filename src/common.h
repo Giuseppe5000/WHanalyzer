@@ -24,7 +24,7 @@ typedef struct {
 // Push 's' into the array if not already inside
 void vars_push_unique(Variables *vars, String s);
 
-// Push 'constat' into the array if not already inside
+// Push 'constant' into the array if not already inside
 void constant_push_unique(Constants *c, int64_t constant);
 
 // Same as originals but exits on OOM

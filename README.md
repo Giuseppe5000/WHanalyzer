@@ -13,8 +13,10 @@ The theory behind this static analyzer is called **Abstract Interpretation**.
 >
 > Source: https://en.wikipedia.org/wiki/Abstract_interpretation.
 
-This project was made as an assignment for the Software Verification course of the University of Padua.
+This project was made as an assignment for the Software Verification course of the University of Padua.\
 It is written in C (C99) and has no external dependencies.
+
+The implementation follows mostly of the directives shown in the Tutorial on Static Inference of Numeric Invariants by Abstract Interpretation by Antoine Miné.
 
 ## Requirements
 - C99-compatible compiler.
