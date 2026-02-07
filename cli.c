@@ -38,7 +38,7 @@ void print_help_analyze(char **argv) {
 }
 
 void print_help_analyze_pinterval(char **argv) {
-    fprintf(stderr, "Usage: %s analyze p_interval SOURCE [OPTIONS]\n\n", argv[0]);
+    fprintf(stderr, "Usage: %s analyze pinterval SOURCE [OPTIONS]\n\n", argv[0]);
     fprintf(stderr, "Given m,n ∈ (Z union {-INF, +INF}),\n");
     fprintf(stderr, "the abstract domain of parametric interval Int(m,n) is defined as the union of this sets:\n");
     fprintf(stderr, "  { BOTTOM, TOP }\n");
